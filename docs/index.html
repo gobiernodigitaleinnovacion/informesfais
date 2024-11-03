@@ -706,4 +706,567 @@ function filterData() {
                         terminosPorMes[mesTermino]++;
                         
                         // Cálculo de meses entre fechas
-                        const diferenciaMeses =
+                        const diferenciaMeses = 
+                            (termino.getFullYear() - inicio.getFullYear()) * 12 + 
+                            (termino.getMonth() - inicio.getMonth());
+                        
+                        if (diferenciaMeses >= 0) {
+                            tiempoTotal += diferenciaMeses;
+                            proyectosValidos++;
+                        }
+                    }
+                }
+            });
+        
+            const mesMaxInicios = iniciosPorMes.indexOf(Math.max(...iniciosPorMes));
+            const mesMaxTerminos = terminosPorMes.indexOf(Math.max(...terminosPorMes));
+        
+            return {
+                promedioTiempoEjecucion: proyectosValidos > 0 ? (tiempoTotal / proyectosValidos).toFixed(1) : "0",
+                mesMasInicios: meses[mesMaxInicios],
+                mesMasTerminos: meses[mesMaxTerminos]
+            };
+        }
+
+        async function obtenerAnalisisOpenAI(data, analisis) {
+    try {
+        const estado = document.getElementById('estado').value;
+        const esCDMX = estado === 'Ciudad de México';
+        const terminoGeografico = esCDMX ? 'alcaldías' : 'municipios';
+        
+        const prompt = `Analiza los siguientes datos del FAIS (Fondo de Aportaciones para la Infraestructura Social) y proporciona un análisis detallado estructurado en secciones claras. Los datos incluyen información a nivel granular y métricas calculadas.
+
+Datos Principales:
+
+INDICADORES FINANCIEROS
+- Total Aprobado: $${formatNumber(analisis.financiero.totalAprobado)}
+- Total Ejercido: $${formatNumber(analisis.financiero.totalEjercido)}
+- Total Pagado: $${formatNumber(analisis.financiero.totalPagado)}
+- % Ejercido vs Aprobado: ${analisis.financiero.porcentajeEjercido}%
+- % Pagado vs Aprobado: ${analisis.financiero.porcentajePagado}%
+
+INDICADORES FÍSICOS
+- Total Proyectos: ${analisis.fisico.totalProyectos}
+- Promedio Avance: ${analisis.fisico.promedioAvance}%
+- Estatus de Proyectos: ${JSON.stringify(analisis.fisico.proyectosPorEstatus)}
+
+INDICADORES DE COBERTURA
+- Total Localidades: ${analisis.cobertura.totalLocalidades}
+- Distribución: ${analisis.cobertura.distribucionGeografica}
+- Concentración de Inversión: ${analisis.cobertura.porcentajeConcentracion}%
+
+INDICADORES DE EJECUCIÓN
+- Total Instituciones Ejecutoras: ${analisis.ejecucion.totalEjecutoras}
+- Total Contratistas: ${analisis.ejecucion.totalContratistas}
+- Total Convocantes: ${analisis.ejecucion.totalConvocantes}
+
+BENEFICIARIOS
+- Total Mujeres: ${formatNumber(analisis.beneficiarios.totalMujeres)}
+- Total Hombres: ${formatNumber(analisis.beneficiarios.totalHombres)}
+- Ratio Mujeres: ${analisis.beneficiarios.ratioMujeres}%
+
+TEMPORALIDAD
+- Promedio Tiempo Ejecución: ${analisis.temporal.promedioTiempoEjecucion} meses
+- Mes con más Inicios: ${analisis.temporal.mesMasInicios}
+- Mes con más Términos: ${analisis.temporal.mesMasTerminos}
+
+Nota: Para este análisis, cuando se mencionen unidades territoriales, usar el término "${terminoGeografico}" ya que los datos corresponden a ${estado}.
+Proporciona un análisis estructurado con las siguientes secciones claramente delimitadas:
+
+1. RESUMEN EJECUTIVO
+[Resumen conciso de los hallazgos principales y conclusiones clave]
+
+2. EFICIENCIA EN LA EJECUCIÓN DEL PRESUPUESTO
+[Análisis detallado del ejercicio presupuestal y su eficiencia]
+
+3. IMPACTO Y ALCANCE DE LOS PROYECTOS
+[Evaluación del alcance territorial y beneficiarios]
+
+4. EQUIDAD Y DISTRIBUCIÓN
+[Análisis de la distribución de recursos y beneficiarios]
+
+5. ÁREAS DE OPORTUNIDAD Y RECOMENDACIONES
+[Tu análisis aquí]
+
+Notas importantes:
+- Cada sección debe estar claramente separada
+- Usa datos específicos para respaldar el análisis
+- Incluye porcentajes y cifras relevantes
+- Mantén un tono técnico pero comprensible
+- Enfócate en conclusiones accionables
+- No repitas los títulos de las secciones
+- No uses símbolos especiales como #
+- Escribe párrafos concisos y bien estructurados
+- Usa datos específicos para respaldar el análisis`;
+
+        const response = await fetch(`${CONFIG.AZURE_OPENAI_ENDPOINT}/openai/deployments/${CONFIG.AZURE_OPENAI_DEPLOYMENT_NAME}/chat/completions?api-version=${CONFIG.AZURE_OPENAI_API_VERSION}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'api-key': CONFIG.AZURE_OPENAI_API_KEY
+            },
+            body: JSON.stringify({
+                messages: [
+                    { 
+                        role: "system", 
+                        content: "Eres un analista experto en fondos públicos y desarrollo social, especializado en el análisis del FAIS. Tu objetivo es proporcionar análisis detallados y estructurados que ayuden a la toma de decisiones."
+                    },
+                    { role: "user", content: prompt }
+                ],
+                temperature: 0.7,
+                max_tokens: 2000,
+                top_p: 0.95,
+                frequency_penalty: 0,
+                presence_penalty: 0
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Error en la API: ${response.status}`);
+        }
+
+        const result = await response.json();
+        return result.choices[0].message.content;
+    } catch (error) {
+        console.error('Error al obtener análisis de OpenAI:', error);
+        return "No se pudo generar el análisis automático. Por favor, intente nuevamente.";
+    }
+}
+async function generarInforme(data, programa) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const estado = document.getElementById('estado').value;
+    const esCDMX = estado === 'Ciudad de México';
+    const terminoGeografico = esCDMX ? 'Alcaldía' : 'Municipio';
+    
+    const filtros = {
+        ciclo: document.getElementById('ciclo').value,
+        programa,
+        estado,
+        municipio: document.getElementById('municipio').value
+    };
+    
+    const esEstatal = programa === 'I003-FAIS Entidades';
+
+    // Función para centrar texto
+    function centrarTexto(doc, texto, y, size) {
+        const textWidth = doc.getStringUnitWidth(texto) * size / doc.internal.scaleFactor;
+        const pageWidth = doc.internal.pageSize.width;
+        return (pageWidth - textWidth) / 2;
+    }
+
+    // Función para dividir título en dos líneas
+    function dividirTitulo(programa) {
+        if (programa === 'I003-FAIS Entidades') {
+            return ['Análisis', programa];
+        } else if (programa === 'I004-FAIS Municipal y de las Demarcaciones Territoriales del Distrito Federal') {
+            return ['Análisis I004-FAIS Municipal y de las', 'Demarcaciones Territoriales del Distrito Federal'];
+        } else {
+            return ['Análisis', programa];
+        }
+    }
+
+    // Función para formatear texto en párrafos
+    function formatearParrafo(texto, maxWidth) {
+        const words = texto.split(' ');
+        const lines = [];
+        let currentLine = words[0];
+
+        for (let i = 1; i < words.length; i++) {
+            const word = words[i];
+            const width = doc.getStringUnitWidth(currentLine + ' ' + word) * 10 / doc.internal.scaleFactor;
+            if (width < maxWidth) {
+                currentLine += ' ' + word;
+            } else {
+                lines.push(currentLine);
+                currentLine = word;
+            }
+        }
+        lines.push(currentLine);
+        return lines;
+    }
+
+    // Análisis completo
+    const analisis = {
+        financiero: analizarFinanciero(data),
+        fisico: analizarFisico(data),
+        inversion: analizarInversion(data),
+        ejecucion: analizarEjecucion(data),
+        cobertura: analizarCobertura(data, esEstatal),
+        beneficiarios: analizarBeneficiarios(data),
+        temporal: analizarTemporal(data)
+    };
+
+    // Primera página - Indicadores
+    doc.setFontSize(16);
+    let yPos = 20;
+    const lineasTitulo = dividirTitulo(programa);
+    
+    lineasTitulo.forEach(linea => {
+        const xCentrado = centrarTexto(doc, linea, yPos, 16);
+        doc.text(linea, xCentrado, yPos);
+        yPos += 10;
+    });
+
+    // Información de filtros con término correcto
+    doc.setFontSize(12);
+    const infoFiltros = `Ciclo: ${filtros.ciclo} | Estado: ${filtros.estado}${filtros.municipio ? ` | ${terminoGeografico}: ${filtros.municipio}` : ''}`;
+    const xCentradoFiltros = centrarTexto(doc, infoFiltros, yPos, 12);
+    doc.text(infoFiltros, xCentradoFiltros, yPos);
+    yPos += 10;
+
+    // A. Indicadores Financieros
+    doc.setFontSize(14);
+    doc.text('A. Indicadores Financieros', 20, yPos);
+    yPos += 8;
+    doc.setFontSize(10);
+    doc.text(`• Total Aprobado: $${formatNumber(analisis.financiero.totalAprobado)}`, 30, yPos); yPos += 6;
+    doc.text(`• Total Ejercido: $${formatNumber(analisis.financiero.totalEjercido)}`, 30, yPos); yPos += 6;
+    doc.text(`• Total Pagado: $${formatNumber(analisis.financiero.totalPagado)}`, 30, yPos); yPos += 6;
+    doc.text(`• % Ejercido vs Aprobado: ${analisis.financiero.porcentajeEjercido}%`, 30, yPos); yPos += 6;
+    doc.text(`• % Pagado vs Aprobado: ${analisis.financiero.porcentajePagado}%`, 30, yPos); yPos += 10;
+
+    // B. Indicadores Físicos
+    doc.setFontSize(14);
+    doc.text('B. Indicadores Físicos', 20, yPos);
+    yPos += 8;
+    doc.setFontSize(10);
+    doc.text(`• Total Proyectos: ${analisis.fisico.totalProyectos}`, 30, yPos); yPos += 6;
+    doc.text(`• Promedio Avance Físico: ${analisis.fisico.promedioAvance}%`, 30, yPos); yPos += 6;
+    doc.text(`• Proyectos por Estatus:`, 30, yPos); yPos += 6;
+    Object.entries(analisis.fisico.proyectosPorEstatus).forEach(([estatus, cantidad]) => {
+        doc.text(`  - ${estatus}: ${cantidad}`, 35, yPos); yPos += 6;
+    });
+    yPos += 4;
+
+    // C. Indicadores de Inversión
+    doc.setFontSize(14);
+    doc.text('C. Indicadores de Inversión', 20, yPos);
+    yPos += 8;
+    doc.setFontSize(10);
+    doc.text(`• Distribución por Categoría:`, 30, yPos); yPos += 6;
+    Object.entries(analisis.inversion.porCategoria).forEach(([cat, monto]) => {
+        const porcentaje = (monto / analisis.financiero.totalAprobado * 100).toFixed(2);
+        doc.text(`  - ${cat}: ${porcentaje}%`, 35, yPos); yPos += 6;
+    });
+    yPos += 4;
+
+    // D. Indicadores de Ejecución
+    doc.setFontSize(14);
+    doc.text('D. Indicadores de Ejecución', 20, yPos);
+    yPos += 8;
+    doc.setFontSize(10);
+    doc.text(`• Total Instituciones Ejecutoras: ${analisis.ejecucion.totalEjecutoras}`, 30, yPos); yPos += 6;
+    doc.text(`• Total Contratistas: ${analisis.ejecucion.totalContratistas}`, 30, yPos); yPos += 6;
+    doc.text(`• Total Tipos de Convocantes: ${analisis.ejecucion.totalConvocantes}`, 30, yPos); yPos += 10;
+
+    // E. Indicadores de Cobertura
+    doc.setFontSize(14);
+    doc.text('E. Indicadores de Cobertura', 20, yPos);
+    yPos += 8;
+    doc.setFontSize(10);
+    doc.text(`• Total Localidades Beneficiadas: ${analisis.cobertura.totalLocalidades}`, 30, yPos); yPos += 6;
+    doc.text(`• Distribución Geográfica: ${analisis.cobertura.distribucionGeografica}`, 30, yPos); yPos += 6;
+    doc.text(`• Concentración de Inversión: ${analisis.cobertura.porcentajeConcentracion}%`, 30, yPos); yPos += 10;
+
+    // F. Indicadores de Beneficiarios
+    doc.setFontSize(14);
+    doc.text('F. Indicadores de Beneficiarios', 20, yPos);
+    yPos += 8;
+    doc.setFontSize(10);
+    doc.text(`• Total Mujeres: ${formatNumber(analisis.beneficiarios.totalMujeres)}`, 30, yPos); yPos += 6;
+    doc.text(`• Total Hombres: ${formatNumber(analisis.beneficiarios.totalHombres)}`, 30, yPos); yPos += 6;
+    doc.text(`• Ratio Mujeres/Hombres: ${analisis.beneficiarios.ratioMujeres}%`, 30, yPos); yPos += 10;
+
+    // G. Indicadores Temporales
+    doc.setFontSize(14);
+    doc.text('G. Indicadores Temporales', 20, yPos);
+    yPos += 8;
+    doc.setFontSize(10);
+    doc.text(`• Promedio Tiempo Ejecución: ${analisis.temporal.promedioTiempoEjecucion} meses`, 30, yPos); yPos += 6;
+    doc.text(`• Mes con más Inicios: ${analisis.temporal.mesMasInicios}`, 30, yPos); yPos += 6;
+    doc.text(`• Mes con más Términos: ${analisis.temporal.mesMasTerminos}`, 30, yPos); yPos += 10;
+
+    // Nueva página para el análisis de OpenAI
+    doc.addPage();
+    yPos = 20;
+
+    // Título del análisis
+    doc.setFontSize(16);
+    doc.setFont(undefined, 'bold');
+    const tituloAnalisis = 'H. Análisis Detallado';
+    const xCentradoAnalisis = centrarTexto(doc, tituloAnalisis, yPos, 16);
+    doc.text(tituloAnalisis, xCentradoAnalisis, yPos);
+    yPos += 15;
+
+    try {
+        const analisisOpenAI = await obtenerAnalisisOpenAI(data, analisis);
+        
+        // Limpieza inicial del texto
+        const contenidoLimpio = analisisOpenAI
+            .replace(/#{2,}/g, '')
+            .replace(/([A-Z\s]+)\n\1/g, '$1')
+            .replace(/\n+/g, '\n')
+            .replace(/^\d+\.\s*/gm, '') // Eliminar números al inicio de línea
+            .trim()
+            .replace(/municipio/gi, esCDMX ? 'alcaldía' : 'municipio')
+            .replace(/municipios/gi, esCDMX ? 'alcaldías' : 'municipios');
+
+        // Dividir en secciones principales con números romanos
+        const titulos = [
+            'I. RESUMEN EJECUTIVO',
+            'II. EFICIENCIA EN LA EJECUCIÓN DEL PRESUPUESTO', 
+            'III. IMPACTO Y ALCANCE DE LOS PROYECTOS',
+            'IV. EQUIDAD Y DISTRIBUCIÓN',
+            'V. ÁREAS DE OPORTUNIDAD Y RECOMENDACIONES'
+        ];
+
+        const secciones = contenidoLimpio.split(/(?=RESUMEN EJECUTIVO|EFICIENCIA EN LA EJECUCIÓN|IMPACTO Y ALCANCE|EQUIDAD Y DISTRIBUCIÓN|ÁREAS DE OPORTUNIDAD)/);
+
+        secciones.forEach((seccion, index) => {
+            if (!seccion.trim()) return;
+
+            if (yPos > 250) {
+                doc.addPage();
+                yPos = 20;
+            }
+
+            // Procesar título y contenido
+            const [_titulo, ...contenidoArray] = seccion.split('\n').map(s => s.trim()).filter(Boolean);
+            
+            // Usar título numerado
+            const titulo = titulos[index] || _titulo;
+            
+            // Título de la sección
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'bold');
+            doc.text(titulo, 20, yPos);
+            yPos += 8;
+
+            // Contenido de la sección
+            doc.setFont(undefined, 'normal');
+            doc.setFontSize(10);
+
+            // Unir todo el contenido y dividir en párrafos reales
+            const contenido = contenidoArray.join(' ')
+                .replace(/\s+/g, ' ')
+                .replace(/\.\s+/g, '.|') // Marcar finales de oración
+                .split('|')
+                .map(p => p.trim())
+                .filter(Boolean);
+
+            contenido.forEach(parrafo => {
+                if (!parrafo) return;
+                
+                const palabras = parrafo.split(' ');
+                let lineaActual = '';
+                const maxWidth = 170;
+
+                for (const palabra of palabras) {
+                    const lineaPrueba = lineaActual + (lineaActual ? ' ' : '') + palabra;
+                    const width = doc.getStringUnitWidth(lineaPrueba) * 10 / doc.internal.scaleFactor;
+
+                    if (width > maxWidth) {
+                        doc.text(lineaActual, 20, yPos);
+                        yPos += 6;
+                        lineaActual = palabra;
+                    } else {
+                        lineaActual = lineaPrueba;
+                    }
+                }
+
+                if (lineaActual) {
+                    doc.text(lineaActual, 20, yPos);
+                    yPos += 6;
+                }
+
+                yPos += 4; // Espacio entre párrafos
+            });
+
+            yPos += 10; // Espacio entre secciones
+        });
+
+    } catch (error) {
+        console.error('Error al generar el análisis:', error);
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'normal');
+        doc.text('No se pudo generar el análisis automático. Por favor, intente nuevamente.', 20, yPos);
+    }
+
+    // Guardar el PDF con nombre correcto
+    const nombreArchivo = `${filtros.ciclo}_${programa.split('-')[1]}_${filtros.estado}_${esCDMX ? 'Alcaldia' : 'Municipio'}_${filtros.municipio}.pdf`;
+    doc.save(nombreArchivo);
+}
+        // Event Listeners
+        document.getElementById('ciclo').addEventListener('change', function() {
+            document.getElementById('municipio').value = '';
+            updateMunicipios();
+            filterData();
+        });
+
+// Modificar el event listener del programa
+document.getElementById('programa').addEventListener('change', function() {
+    const programa = this.value;
+    console.log('Programa seleccionado:', programa);
+    console.log('Datos disponibles al cambiar programa:', fullData.length);
+    console.log('Muestra de datos:', fullData.slice(0, 1));
+    
+    document.getElementById('municipio').value = '';
+    
+    if (programa === 'I003-FAIS Entidades') {
+        document.getElementById('municipioContainer').style.display = 'none';
+        document.getElementById('municipio').disabled = true;
+    } else {
+        document.getElementById('municipioContainer').style.display = 'block';
+        updateMunicipios();
+    }
+    
+    filterData();
+});
+        // Modificar el event listener del estado para incluir el mapeo correcto
+        document.getElementById('estado').addEventListener('change', async function() {
+            try {
+                const estadoSeleccionado = this.value;
+                if (estadoSeleccionado) {
+                    document.getElementById('loadingMessage').style.display = 'block';
+                    
+                    fullData = await fetchExcelData(estadoSeleccionado);
+                    
+                    // Asegurarse de que los datos tienen el formato correcto
+                    fullData = fullData.map(item => ({
+                        ...item,
+                        'CICLO DEL RECURSO': Number(item['CICLO DEL RECURSO']),
+                        APROBADO: Number(item.APROBADO) || 0,
+                        EJERCIDO: Number(item.EJERCIDO) || 0,
+                        PAGADO: Number(item.PAGADO) || 0
+                    }));
+                    
+                    const ciclos = [...new Set(fullData
+                        .map(item => item['CICLO DEL RECURSO'])
+                        .filter(Boolean)
+                    )];
+                    
+                    const programas = [...new Set(fullData
+                        .map(item => item['PROGRAMA PRESUPUESTARIO'])
+                        .filter(Boolean)
+                    )];
+                    
+                    console.log('Ciclos disponibles:', ciclos);
+                    console.log('Programas disponibles:', programas);
+                    
+                    populateSelect('ciclo', ciclos.sort((a, b) => b - a));
+                    populateSelect('programa', programas.sort());
+                    
+                    document.getElementById('loadingMessage').style.display = 'none';
+                }
+                
+                document.getElementById('municipio').value = '';
+                updateMunicipios();
+                filterData();
+                
+            } catch (error) {
+                document.getElementById('loadingMessage').style.display = 'none';
+                console.error('Error al cargar datos del estado:', error);
+            }
+        });
+
+        // Agregar el event listener
+        document.getElementById('limpiarFiltros').addEventListener('click', limpiarFiltros);
+
+        document.getElementById('municipio').addEventListener('change', filterData);
+
+        document.getElementById('generarAnalisis').addEventListener('click', async function() {
+    const boton = this;
+    const textoOriginal = boton.textContent;
+    
+    try {
+        boton.classList.add('generating-analysis', 'button-loading');
+        boton.textContent = 'Generando análisis';
+        boton.disabled = true;
+        
+        const programa = document.getElementById('programa').value;
+        await generarInforme(filteredData, programa);
+        
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Ocurrió un error al generar el informe. Por favor, intente nuevamente.');
+    } finally {
+        boton.classList.remove('generating-analysis', 'button-loading');
+        boton.textContent = textoOriginal;
+        boton.disabled = false;
+    }
+});
+        // Inicialización
+        initialize();
+        document.getElementById('exportarExcel').addEventListener('click', function() {
+    const boton = this;
+    const textoOriginal = boton.textContent;
+    
+    try {
+        boton.classList.add('generating-analysis', 'button-loading');
+        boton.textContent = 'Exportando datos';
+        boton.disabled = true;
+
+        // Crear un nuevo libro de trabajo
+        const wb = XLSX.utils.book_new();
+        
+        // Preparar los datos para la exportación
+        const dataToExport = filteredData.map(item => ({
+            'Folio': item['FOLIO'],  // Agregando el campo Folio
+            'Ciclo del Recurso': item['CICLO DEL RECURSO'],
+            'Programa Presupuestario': item['PROGRAMA PRESUPUESTARIO'],
+            'Estado': item['NOMBRE_ENTIDAD'],
+            'Municipio': item['NOMBRE_MUNICIPIO'],
+            'Localidad': item['LOCALIDAD'],
+            'Monto Aprobado': item['APROBADO'],
+            'Monto Ejercido': item['EJERCIDO'],
+            'Monto Pagado': item['PAGADO'],
+            'Estatus': item['ESTATUS'],
+            'Porcentaje Avance': item['PORCENTAJE'],
+            'Institución Ejecutora': item['INSTITUCION_EJECUTORA'],
+            'Contratista': item['CONTRATISTA'],
+            'Convocante': item['CONVOCANTE'],
+            'Categoría': item['CATEGORIA'],
+            'Tipo de Programa': item['TIPO_PROGRAMA_PROYECTO'],
+            'Clasificación': item['CLASIFICACION'],
+            'Beneficiarios Mujeres': item['MUJERES'],
+            'Beneficiarios Hombres': item['HOMBRES'],
+            'Fecha Inicio': item['FECHA_INICIO'],
+            'Fecha Término': item['FECHA_TERMINO']
+        }));
+
+        // Crear una hoja de trabajo con los datos
+        const ws = XLSX.utils.json_to_sheet(dataToExport);
+
+        // Ajustar el ancho de las columnas
+        const wscols = Object.keys(dataToExport[0]).map(() => ({ wch: 20 }));
+        ws['!cols'] = wscols;
+
+        // Añadir la hoja al libro
+        XLSX.utils.book_append_sheet(wb, ws, "Datos FAIS");
+
+        // Generar el nombre del archivo
+        const filtros = {
+            ciclo: document.getElementById('ciclo').value,
+            programa: document.getElementById('programa').value.split('-')[1],
+            estado: document.getElementById('estado').value,
+            municipio: document.getElementById('municipio').value
+        };
+        
+        const nombreArchivo = `${filtros.ciclo}_${filtros.programa}_${filtros.estado}${filtros.municipio ? '_' + filtros.municipio : ''}.xlsx`;
+
+        // Exportar el archivo
+        XLSX.writeFile(wb, nombreArchivo);
+        
+    } catch (error) {
+        console.error('Error al exportar a Excel:', error);
+        alert('Ocurrió un error al exportar los datos. Por favor, intente nuevamente.');
+    } finally {
+        boton.classList.remove('generating-analysis', 'button-loading');
+        boton.textContent = textoOriginal;
+        boton.disabled = false;
+    }
+});
+    </script>
+</body>
+</html>
