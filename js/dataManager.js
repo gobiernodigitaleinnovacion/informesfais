@@ -8,11 +8,17 @@ async function fetchExcelData(estado) {
             throw new Error(`Archivo no encontrado para el estado: ${estado}`);
         }
 
-        // Usar proxy CORS.io
+        // Usar proxy cors-anywhere de Heroku
         const blobUrl = `${baseUrl}${fileName}?${sasToken}`;
-        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(blobUrl)}`;
+        const proxyUrl = `https://cors-anywhere.herokuapp.com/${blobUrl}`;
         
-        const response = await fetch(proxyUrl);
+        const response = await fetch(proxyUrl, {
+            method: 'GET',
+            headers: {
+                'Origin': 'https://gobiernodigitaleinnovacion.github.io'
+            }
+        });
+
         if (!response.ok) {
             throw new Error(`Error HTTP: ${response.status} - ${response.statusText}`);
         }
