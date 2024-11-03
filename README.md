@@ -1,29 +1,34 @@
 # Sistema de Análisis FAIS
 
-## Pasos para Publicar en GitHub Pages
+## Estado de la Publicación
 
-1. Ve a https://github.com/gobiernodigitaleinnovacion/informesfais
+El sitio está en proceso de publicación. Este proceso puede tardar hasta 5-10 minutos la primera vez.
 
-2. En la parte superior del repositorio, haz clic en "Settings" (tiene un ícono de engranaje ⚙️)
+### Cómo verificar el progreso:
 
-3. En el menú lateral izquierdo, busca y haz clic en "Pages" (está bajo "Code and automation")
+1. Ve a la configuración del repositorio:
+   https://github.com/gobiernodigitaleinnovacion/informesfais/settings/pages
 
-4. En la sección "Build and deployment":
-   - Donde dice "Source", selecciona "Deploy from a branch"
-   - En "Branch", selecciona "master"
-   - En el selector de carpeta al lado de "master", selecciona "/docs"
-   - Haz clic en "Save"
+2. Verás uno de estos mensajes:
+   - 🟡 "Your site is being published..." (Aún publicando)
+   - 🟢 "Your site is published..." (Ya está publicado)
 
-5. Espera unos minutos. GitHub Pages comenzará a construir tu sitio.
+3. Cuando veas el mensaje en verde (🟢), el sitio estará disponible en:
+   https://gobiernodigitaleinnovacion.github.io/informesfais/
 
-6. Cuando esté listo, verás un mensaje en verde que dice:
-   "Your site is published at https://gobiernodigitaleinnovacion.github.io/informesfais/"
+### Qué hacer mientras esperas:
 
-## Verificar la Publicación
+1. No cierres la página de configuración
+2. Puedes refrescar la página cada minuto para ver el progreso
+3. Cuando el círculo de carga desaparezca, el sitio estará listo
 
-1. Espera 2-3 minutos después de guardar la configuración
-2. Refresca la página de configuración de GitHub Pages
-3. Haz clic en el enlace proporcionado para ver tu sitio
+### Si tarda más de 10 minutos:
+
+1. Verifica que la configuración sea correcta:
+   - Branch: master
+   - Folder: /docs
+2. Intenta refrescar la página del sitio
+3. Si aún no funciona, podemos intentar otras soluciones
 
 ## Contacto
 
