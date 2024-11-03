@@ -198,7 +198,7 @@
        <header class="app-header">
            <h1 class="app-title">Análisis FAIS</h1>
        </header>
-       <title>Análisis FAIS</title>
+       
 <!-- Librerías necesarias -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -272,173 +272,163 @@
        </div>
    </div>
     <script>
-        let fullData = [];
-        let filteredData = [];
-
-        // Mapeo de estados a archivos
-        const estadosMapping = {
-    'Aguascalientes': 'FAIS_Aguascalientes.xlsx',
-    'Baja California': 'FAIS_Baja_California.xlsx',
-    'Baja California Sur': 'FAIS_Baja_California_Sur.xlsx',
-    'Campeche': 'FAIS_Campeche.xlsx',
-    'Chiapas': 'FAIS_Chiapas.xlsx',
-    'Chihuahua': 'FAIS_Chihuahua.xlsx',
-    'Ciudad de México': 'FAIS_Ciudad_de_México.xlsx',
-    'Coahuila de Zaragoza': 'FAIS_Coahuila_de_Zaragoza.xlsx',  // Nombre completo
-    'Colima': 'FAIS_Colima.xlsx',
-    'Durango': 'FAIS_Durango.xlsx',
-    'Guanajuato': 'FAIS_Guanajuato.xlsx',
-    'Guerrero': 'FAIS_Guerrero.xlsx',
-    'Hidalgo': 'FAIS_Hidalgo.xlsx',
-    'Jalisco': 'FAIS_Jalisco.xlsx',
-    'México': 'FAIS_México.xlsx',
-    'Michoacán de Ocampo': 'FAIS_Michoacán_de_Ocampo.xlsx',    // Nombre completo
-    'Morelos': 'FAIS_Morelos.xlsx',
-    'Nayarit': 'FAIS_Nayarit.xlsx',
-    'Nuevo León': 'FAIS_Nuevo_León.xlsx',
-    'Oaxaca': 'FAIS_Oaxaca.xlsx',
-    'Puebla': 'FAIS_Puebla.xlsx',
-    'Querétaro': 'FAIS_Querétaro.xlsx',
-    'Quintana Roo': 'FAIS_Quintana_Roo.xlsx',
-    'San Luis Potosí': 'FAIS_San_Luis_Potosí.xlsx',
-    'Sinaloa': 'FAIS_Sinaloa.xlsx',
-    'Sonora': 'FAIS_Sonora.xlsx',
-    'Tabasco': 'FAIS_Tabasco.xlsx',
-    'Tamaulipas': 'FAIS_Tamaulipas.xlsx',
-    'Tlaxcala': 'FAIS_Tlaxcala.xlsx',
-    'Veracruz de Ignacio de la Llave': 'FAIS_Veracruz_de_Ignacio_de_la_Llave.xlsx', // Nombre completo
-    'Yucatán': 'FAIS_Yucatán.xlsx',
-    'Zacatecas': 'FAIS_Zacatecas.xlsx'
-};
-
-        // Configuración de la URL base y token SAS
+        // Configuración inicial
         const baseUrl = 'https://stindicadores.blob.core.windows.net/estados-fais/';
         const sasToken = 'sp=r&st=2024-10-30T21:15:16Z&se=2026-10-31T05:15:16Z&spr=https&sv=2022-11-02&sr=c&sig=okiG4MWLVsgE37DUov5YBZcbXqjYOd%2BKcOnNh0TYN2s%3D';
 
-        // Configuración de Azure OpenAI
-        const CONFIG = {
-    AZURE_OPENAI_API_KEY: "de7bb7a3b62e409e890737a2a4f7d3be",
-    AZURE_OPENAI_ENDPOINT: "https://opeanaihtmlautomatizados.openai.azure.com/",
-    AZURE_OPENAI_API_VERSION: "2024-02-15-preview",
-    AZURE_OPENAI_DEPLOYMENT_NAME: "gpt-4o-minihtmlautomatizado", // Reemplaza con tu nombre de deployment
-        };
+        // Variables globales
+        let fullData = [];
+        let filteredData = [];
 
-        function formatNumber(number) {
-            return new Intl.NumberFormat('es-MX', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            }).format(number);
-        }
-
-        function limpiarFiltros() {
-            // Resetear los selectores
-            document.getElementById('ciclo').value = '';
-            document.getElementById('programa').value = '';
-            document.getElementById('estado').value = '';
-            document.getElementById('municipio').value = '';
-            
-            // Limpiar datos
-            fullData = [];
-            filteredData = [];
-            
-            // Resetear la interfaz
-            document.getElementById('municipioContainer').style.display = 'block';
-            document.getElementById('municipio').disabled = true;
-            
-            // Deshabilitar botones
-            document.getElementById('generarAnalisis').disabled = true;
-            document.getElementById('exportarExcel').disabled = true;
-            
-            // Limpiar mensaje de error si existe
-            document.getElementById('errorMessage').style.display = 'none';
-            
-            // Reinicializar solo los estados
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', () => {
             initialize();
-        }
-
-        function inspectData(data) {
-            if (data.length > 0) {
-                console.log('Estructura del primer registro:', Object.keys(data[0]));
-                console.log('Muestra del primer registro:', data[0]);
-                
-                // Contar registros por programa
-                const programas = data.reduce((acc, item) => {
-                    const prog = item['PROGRAMA PRESUPUESTARIO'] || 'NO ESPECIFICADO';
-                    acc[prog] = (acc[prog] || 0) + 1;
-                    return acc;
-                }, {});
-                console.log('Conteo por programa:', programas);
-            }
-        }
-
-        async function fetchExcelData(estado) {
-    try {
-        const fileName = estadosMapping[estado];
-        if (!fileName) {
-            throw new Error(`Archivo no encontrado para el estado: ${estado}`);
-        }
-
-        const fullUrl = `${baseUrl}${fileName}?${sasToken}`;
-        console.log('Intentando cargar:', fullUrl);
-
-        const response = await fetch(fullUrl);
-        if (!response.ok) {
-            throw new Error(`Error HTTP: ${response.status} - ${response.statusText}`);
-        }
-        
-        const arrayBuffer = await response.arrayBuffer();
-        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const data = XLSX.utils.sheet_to_json(firstSheet);
-        
-        if (data.length === 0) {
-            throw new Error(`No se encontraron datos para el estado: ${estado}`);
-        }
-
-        // Normalización de datos
-        const dataNormalizada = data.map(row => ({
-            ...row,
-            'CICLO DEL RECURSO': Number(row['CICLO DEL RECURSO']) || 0,
-            APROBADO: Number(row.APROBADO) || 0,
-            EJERCIDO: Number(row.EJERCIDO) || 0,
-            PAGADO: Number(row.PAGADO) || 0,
-            NOMBRE_ENTIDAD: row.NOMBRE_ENTIDAD || '',
-            NOMBRE_MUNICIPIO: row.NOMBRE_MUNICIPIO || row.MUNICIPIO || ''
-        }));
-
-        console.log('Datos normalizados:', {
-            total: dataNormalizada.length,
-            muestra: dataNormalizada.slice(0, 3),
-            estados: [...new Set(dataNormalizada.map(d => d.NOMBRE_ENTIDAD))],
-            programas: [...new Set(dataNormalizada.map(d => d['PROGRAMA PRESUPUESTARIO']))]
+            setupEventListeners();
         });
 
-        return dataNormalizada;
-    } catch (error) {
-        console.error('Error al cargar datos:', error);
-        document.getElementById('errorMessage').textContent = `Error al cargar los datos de ${estado}: ${error.message}`;
-        document.getElementById('errorMessage').style.display = 'block';
-        throw error;
-    }
-}
+        // Función de inicialización
         async function initialize() {
             try {
                 document.getElementById('loadingMessage').style.display = 'block';
-                
-                // Primero solo poblamos el selector de estados
                 const estados = Object.keys(estadosMapping).sort();
                 populateSelect('estado', estados);
-                
                 document.getElementById('loadingMessage').style.display = 'none';
                 document.getElementById('filtersContainer').style.display = 'grid';
-                
-                // Los demás filtros se poblarán cuando se seleccione un estado
             } catch (error) {
                 document.getElementById('loadingMessage').style.display = 'none';
                 console.error('Error en inicialización:', error);
             }
         }
 
+        // Configuración de event listeners
+        function setupEventListeners() {
+            document.getElementById('estado').addEventListener('change', handleEstadoChange);
+            document.getElementById('programa').addEventListener('change', handleProgramaChange);
+            document.getElementById('ciclo').addEventListener('change', handleCicloChange);
+            document.getElementById('municipio').addEventListener('change', handleMunicipioChange);
+            document.getElementById('generarAnalisis').addEventListener('click', handleGenerarAnalisis);
+            document.getElementById('exportarExcel').addEventListener('click', handleExportarExcel);
+            document.getElementById('limpiarFiltros').addEventListener('click', handleLimpiarFiltros);
+        }
+
+        // Manejadores de eventos
+        async function handleEstadoChange() {
+            try {
+                const estadoSeleccionado = this.value;
+                if (estadoSeleccionado) {
+                    document.getElementById('loadingMessage').style.display = 'block';
+                    fullData = await fetchExcelData(estadoSeleccionado);
+                    
+                    const ciclos = [...new Set(fullData
+                        .map(item => item['CICLO DEL RECURSO'])
+                        .filter(Boolean)
+                    )].sort((a, b) => b - a);
+                    
+                    const programas = [...new Set(fullData
+                        .map(item => item['PROGRAMA PRESUPUESTARIO'])
+                        .filter(Boolean)
+                    )].sort();
+                    
+                    populateSelect('ciclo', ciclos);
+                    populateSelect('programa', programas);
+                    
+                    document.getElementById('loadingMessage').style.display = 'none';
+                }
+                
+                document.getElementById('municipio').value = '';
+                updateMunicipios();
+                filterData();
+            } catch (error) {
+                document.getElementById('loadingMessage').style.display = 'none';
+                console.error('Error al cargar datos del estado:', error);
+            }
+        }
+
+        function handleProgramaChange() {
+            const programa = this.value;
+            document.getElementById('municipio').value = '';
+            
+            if (programa === 'I003-FAIS Entidades') {
+                document.getElementById('municipioContainer').style.display = 'none';
+                document.getElementById('municipio').disabled = true;
+            } else {
+                document.getElementById('municipioContainer').style.display = 'block';
+                updateMunicipios();
+            }
+            
+            filterData();
+        }
+
+        function handleCicloChange() {
+            document.getElementById('municipio').value = '';
+            updateMunicipios();
+            filterData();
+        }
+
+        function handleMunicipioChange() {
+            filterData();
+        }
+
+        async function handleGenerarAnalisis() {
+            const boton = this;
+            const textoOriginal = boton.textContent;
+            
+            try {
+                boton.classList.add('generating-analysis', 'button-loading');
+                boton.textContent = 'Generando análisis';
+                boton.disabled = true;
+                
+                const programa = document.getElementById('programa').value;
+                await generarInforme(filteredData, programa);
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Ocurrió un error al generar el informe. Por favor, intente nuevamente.');
+            } finally {
+                boton.classList.remove('generating-analysis', 'button-loading');
+                boton.textContent = textoOriginal;
+                boton.disabled = false;
+            }
+        }
+
+        function handleExportarExcel() {
+            const boton = this;
+            const textoOriginal = boton.textContent;
+            
+            try {
+                boton.classList.add('generating-analysis', 'button-loading');
+                boton.textContent = 'Exportando datos';
+                boton.disabled = true;
+
+                exportarDatosExcel();
+            } catch (error) {
+                console.error('Error al exportar a Excel:', error);
+                alert('Ocurrió un error al exportar los datos. Por favor, intente nuevamente.');
+            } finally {
+                boton.classList.remove('generating-analysis', 'button-loading');
+                boton.textContent = textoOriginal;
+                boton.disabled = false;
+            }
+        }
+
+        function handleLimpiarFiltros() {
+            document.getElementById('ciclo').value = '';
+            document.getElementById('programa').value = '';
+            document.getElementById('estado').value = '';
+            document.getElementById('municipio').value = '';
+            
+            fullData = [];
+            filteredData = [];
+            
+            document.getElementById('municipioContainer').style.display = 'block';
+            document.getElementById('municipio').disabled = true;
+            document.getElementById('generarAnalisis').disabled = true;
+            document.getElementById('exportarExcel').disabled = true;
+            document.getElementById('errorMessage').style.display = 'none';
+            
+            initialize();
+        }
+
+        // Funciones de utilidad
         function populateSelect(id, options) {
             const select = document.getElementById(id);
             select.innerHTML = '<option value="">Selecciona ' + id.charAt(0).toUpperCase() + id.slice(1) + '</option>';
@@ -453,820 +443,210 @@
         }
 
         function checkFiltersAndEnableButtons() {
-    const ciclo = document.getElementById('ciclo').value;
-    const programa = document.getElementById('programa').value;
-    const estado = document.getElementById('estado').value;
-    const municipio = document.getElementById('municipio').value;
-    
-    console.log('Verificando filtros:', { ciclo, programa, estado, municipio }); // Para debug
-    
-    const isValid = ciclo && programa && estado && 
-                   (programa === 'I003-FAIS Entidades' || 
-                    programa === 'I004-FAIS Municipal y de las Demarcaciones Territoriales del Distrito Federal' ||
-                    municipio);
-    
-    document.getElementById('generarAnalisis').disabled = !isValid;
-    document.getElementById('exportarExcel').disabled = !isValid;
-}
-
-const estadosNormalizacion = {
-    'Coahuila': 'Coahuila de Zaragoza',
-    'Michoacán': 'Michoacán de Ocampo',
-    'Veracruz': 'Veracruz de Ignacio de la Llave'
-};
-
-function updateMunicipios() {
-    const estado = document.getElementById('estado').value;
-    const programa = document.getElementById('programa').value;
-    const esCDMX = estado === 'Ciudad de México';
-    
-    console.log('Actualizando municipios/alcaldías para:', estado, programa);
-    console.log('Datos disponibles:', fullData.length);
-    
-    if (!fullData || fullData.length === 0) {
-        console.log('No hay datos disponibles');
-        return;
-    }
-
-    // Agregar logs para debugging
-    console.log('Muestra de datos:', fullData.slice(0, 3));
-    console.log('Programas disponibles:', [...new Set(fullData.map(item => item['PROGRAMA PRESUPUESTARIO']))]);
-
-    const datosFiltrados = fullData.filter(item => item['PROGRAMA PRESUPUESTARIO'] === programa);
-    console.log(`Datos filtrados por programa ${programa}:`, datosFiltrados.length);
-
-    const municipios = [...new Set(datosFiltrados.map(item => {
-        // Asegurarse de obtener el nombre del municipio/alcaldía de cualquiera de los campos posibles
-        return item.NOMBRE_MUNICIPIO || item.MUNICIPIO || item.ALCALDIA || '';
-    }).filter(Boolean))].sort();
-    
-    console.log('Municipios/Alcaldías encontrados:', municipios);
-
-    // Limpiar mensaje de error y resetear selector
-    document.getElementById('errorMessage').style.display = 'none';
-    const municipioSelect = document.getElementById('municipio');
-    
-    // Actualizar el texto del selector según sea Ciudad de México o no
-    const etiquetaSelector = esCDMX ? 'Alcaldía' : 'Municipio';
-    municipioSelect.innerHTML = `<option value="">Selecciona ${etiquetaSelector}</option>`;
-    
-    // Verificar si es programa estatal o municipal
-    if (!programa || programa === 'I003-FAIS Entidades') {
-        municipioSelect.disabled = true;
-        document.getElementById('municipioContainer').style.display = 
-            programa === 'I003-FAIS Entidades' ? 'none' : 'block';
-        return;
-    }
-
-    // Para programas municipales (I004, I005, etc.)
-    if (programa.includes('I004') || programa.includes('I005')) {
-        if (municipios.length > 0) {
-            municipioSelect.disabled = false;
-            document.getElementById('municipioContainer').style.display = 'block';
-            municipios.forEach(municipio => {
-                const opt = document.createElement('option');
-                opt.value = municipio;
-                opt.textContent = municipio;
-                municipioSelect.appendChild(opt);
-            });
-        } else {
-            document.getElementById('errorMessage').textContent = 
-                `No se encontraron ${esCDMX ? 'alcaldías' : 'municipios'} para el programa ${programa}. Por favor, seleccione otro programa.`;
-            document.getElementById('errorMessage').style.display = 'block';
-            municipioSelect.disabled = true;
-        }
-    }
-
-    checkFiltersAndEnableButtons();
-}
-
-function filterData() {
-    const ciclo = document.getElementById('ciclo').value;
-    const programa = document.getElementById('programa').value;
-    const estado = document.getElementById('estado').value;
-    const municipio = document.getElementById('municipio').value;
-    
-    console.log('Aplicando filtros:', { ciclo, programa, estado, municipio });
-    console.log('Total datos antes de filtrar:', fullData.length);
-    
-    filteredData = fullData.filter(item => {
-        const matchCiclo = !ciclo || item['CICLO DEL RECURSO'] === Number(ciclo);
-        const matchPrograma = !programa || item['PROGRAMA PRESUPUESTARIO'] === programa;
-        const matchEstado = !estado || item.NOMBRE_ENTIDAD === estado;  // Corregido
-        const matchMunicipio = !municipio || 
-                              programa === 'I003-FAIS Entidades' || 
-                              item.NOMBRE_MUNICIPIO === municipio;
-        
-        console.log('Match de filtros para item:', {
-            ciclo: matchCiclo,
-            programa: matchPrograma,
-            estado: matchEstado,
-            municipio: matchMunicipio,
-            item: {
-                ciclo: item['CICLO DEL RECURSO'],
-                programa: item['PROGRAMA PRESUPUESTARIO'],
-                estado: item.NOMBRE_ENTIDAD,
-                municipio: item.NOMBRE_MUNICIPIO
-            }
-        });
-
-        return matchCiclo && matchPrograma && matchEstado && matchMunicipio;
-    });
-    
-    console.log('Datos filtrados:', filteredData.length);
-    if (filteredData.length > 0) {
-        console.log('Ejemplo de registro filtrado:', filteredData[0]);
-        console.log('Muestra de registros filtrados:', filteredData.slice(0, 3));
-    }
-    
-    checkFiltersAndEnableButtons();
-}
-
-        function analizarFinanciero(data) {
-            const totalAprobado = data.reduce((sum, item) => sum + (parseFloat(item.APROBADO) || 0), 0);
-            const totalEjercido = data.reduce((sum, item) => sum + (parseFloat(item.EJERCIDO) || 0), 0);
-            const totalPagado = data.reduce((sum, item) => sum + (parseFloat(item.PAGADO) || 0), 0);
+            const ciclo = document.getElementById('ciclo').value;
+            const programa = document.getElementById('programa').value;
+            const estado = document.getElementById('estado').value;
+            const municipio = document.getElementById('municipio').value;
             
-            return {
-                totalAprobado,
-                totalEjercido,
-                totalPagado,
-                porcentajeEjercido: totalAprobado > 0 ? ((totalEjercido / totalAprobado) * 100).toFixed(2) : "0.00",
-                porcentajePagado: totalAprobado > 0 ? ((totalPagado / totalAprobado) * 100).toFixed(2) : "0.00"
-            };
-        }
-
-        function analizarFisico(data) {
-            const resumen = {
-                totalProyectos: data.length,
-                promedioAvance: data.length > 0 ? 
-                    (data.reduce((sum, item) => sum + (parseFloat(item.PORCENTAJE) || 0), 0) / data.length).toFixed(2) : 
-                    "0.00",
-                proyectosPorEstatus: data.reduce((acc, item) => {
-                    const estatus = item.ESTATUS || 'NO ESPECIFICADO';
-                    acc[estatus] = (acc[estatus] || 0) + 1;
-                    return acc;
-                }, {})
-            };
+            const isValid = ciclo && programa && estado && 
+                           (programa === 'I003-FAIS Entidades' || 
+                            programa === 'I004-FAIS Municipal y de las Demarcaciones Territoriales del Distrito Federal' ||
+                            municipio);
             
-            resumen.proyectosTerminados = resumen.proyectosPorEstatus['TERMINADO'] || 0;
-            resumen.porcentajeTerminados = resumen.totalProyectos > 0 ? 
-                ((resumen.proyectosTerminados / resumen.totalProyectos) * 100).toFixed(2) : 
-                "0.00";
+            document.getElementById('generarAnalisis').disabled = !isValid;
+            document.getElementById('exportarExcel').disabled = !isValid;
+        }
+
+        function updateMunicipios() {
+            const estado = document.getElementById('estado').value;
+            const programa = document.getElementById('programa').value;
+            const esCDMX = estado === 'Ciudad de México';
             
-            return resumen;
-        }
+            if (!fullData || fullData.length === 0) return;
 
-        function analizarInversion(data) {
-            const analisis = {
-                porCategoria: {},
-                porTipoPrograma: {},
-                porClasificacion: {}
-            };
-        
-            data.forEach(item => {
-                const monto = parseFloat(item.APROBADO) || 0;
-                const categoria = item.CATEGORIA || 'NO ESPECIFICADA';
-                const tipoPrograma = item.TIPO_PROGRAMA_PROYECTO || 'NO ESPECIFICADO';
-                const clasificacion = item.CLASIFICACION || 'NO ESPECIFICADA';
-                
-                analisis.porCategoria[categoria] = (analisis.porCategoria[categoria] || 0) + monto;
-                analisis.porTipoPrograma[tipoPrograma] = (analisis.porTipoPrograma[tipoPrograma] || 0) + monto;
-                analisis.porClasificacion[clasificacion] = (analisis.porClasificacion[clasificacion] || 0) + monto;
-            });
-        
-            return analisis;
-        }
-
-        function analizarEjecucion(data) {
-            return {
-                totalEjecutoras: new Set(data.map(item => item.INSTITUCION_EJECUTORA)).size,
-                totalContratistas: new Set(data.map(item => item.CONTRATISTA)).size,
-                totalConvocantes: new Set(data.map(item => item.CONVOCANTE)).size
-            };
-        }
-
-        function analizarCobertura(data, esEstatal) {
-    const estado = document.getElementById('estado').value;
-    const esCDMX = estado === 'Ciudad de México';
-    const terminoGeografico = esCDMX ? 'alcaldías' : 'municipios';
-    
-    const resultado = {
-        totalLocalidades: new Set(data.map(item => item.LOCALIDAD)).size,
-        distribucionGeografica: esEstatal ? 
-            `${new Set(data.map(item => item.NOMBRE_MUNICIPIO)).size} ${terminoGeografico}` :
-            `${new Set(data.map(item => item.LOCALIDAD)).size} localidades`,
-        concentracionInversion: data.reduce((acc, item) => {
-            const key = esEstatal ? item.NOMBRE_MUNICIPIO : item.LOCALIDAD;
-            acc[key] = (acc[key] || 0) + (Number(item.APROBADO) || 0);
-            return acc;
-        }, {})
-    };
-    
-    const totalInversion = Object.values(resultado.concentracionInversion).reduce((a, b) => a + b, 0);
-    const maxInversion = Math.max(...Object.values(resultado.concentracionInversion), 0);
-    resultado.porcentajeConcentracion = totalInversion > 0 ? 
-        ((maxInversion / totalInversion) * 100).toFixed(2) : "0.00";
-    
-    return resultado;
-}
-
-
-        function analizarBeneficiarios(data) {
-            const totalMujeres = data.reduce((sum, item) => sum + (parseFloat(item.MUJERES) || 0), 0);
-            const totalHombres = data.reduce((sum, item) => sum + (parseFloat(item.HOMBRES) || 0), 0);
-            const total = totalMujeres + totalHombres;
-        
-            return {
-                totalMujeres,
-                totalHombres,
-                ratioMujeres: total > 0 ? ((totalMujeres / total) * 100).toFixed(2) : "0.00"
-            };
-        }
-
-        function analizarTemporal(data) {
-            const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
-                           'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            const datosFiltrados = fullData.filter(item => item['PROGRAMA PRESUPUESTARIO'] === programa);
+            const municipios = [...new Set(datosFiltrados.map(item => 
+                item.NOMBRE_MUNICIPIO || item.MUNICIPIO || item.ALCALDIA || ''
+            ).filter(Boolean))].sort();
             
-            const iniciosPorMes = Array(12).fill(0);
-            const terminosPorMes = Array(12).fill(0);
-            let tiempoTotal = 0;
-            let proyectosValidos = 0;
-        
-            data.forEach(item => {
-                if (item.FECHA_INICIO && item.FECHA_TERMINO) {
-                    const inicio = new Date(item.FECHA_INICIO);
-                    const termino = new Date(item.FECHA_TERMINO);
-                    
-                    if (!isNaN(inicio.getTime()) && !isNaN(termino.getTime())) {
-                        const mesInicio = inicio.getMonth();
-                        const mesTermino = termino.getMonth();
-                        
-                        iniciosPorMes[mesInicio]++;
-                        terminosPorMes[mesTermino]++;
-                        
-                        // Cálculo de meses entre fechas
-                        const diferenciaMeses = 
-                            (termino.getFullYear() - inicio.getFullYear()) * 12 + 
-                            (termino.getMonth() - inicio.getMonth());
-                        
-                        if (diferenciaMeses >= 0) {
-                            tiempoTotal += diferenciaMeses;
-                            proyectosValidos++;
-                        }
-                    }
-                }
-            });
-        
-            const mesMaxInicios = iniciosPorMes.indexOf(Math.max(...iniciosPorMes));
-            const mesMaxTerminos = terminosPorMes.indexOf(Math.max(...terminosPorMes));
-        
-            return {
-                promedioTiempoEjecucion: proyectosValidos > 0 ? (tiempoTotal / proyectosValidos).toFixed(1) : "0",
-                mesMasInicios: meses[mesMaxInicios],
-                mesMasTerminos: meses[mesMaxTerminos]
-            };
-        }
-
-        async function obtenerAnalisisOpenAI(data, analisis) {
-    try {
-        const estado = document.getElementById('estado').value;
-        const esCDMX = estado === 'Ciudad de México';
-        const terminoGeografico = esCDMX ? 'alcaldías' : 'municipios';
-        
-        const prompt = `Analiza los siguientes datos del FAIS (Fondo de Aportaciones para la Infraestructura Social) y proporciona un análisis detallado estructurado en secciones claras. Los datos incluyen información a nivel granular y métricas calculadas.
-
-Datos Principales:
-
-INDICADORES FINANCIEROS
-- Total Aprobado: $${formatNumber(analisis.financiero.totalAprobado)}
-- Total Ejercido: $${formatNumber(analisis.financiero.totalEjercido)}
-- Total Pagado: $${formatNumber(analisis.financiero.totalPagado)}
-- % Ejercido vs Aprobado: ${analisis.financiero.porcentajeEjercido}%
-- % Pagado vs Aprobado: ${analisis.financiero.porcentajePagado}%
-
-INDICADORES FÍSICOS
-- Total Proyectos: ${analisis.fisico.totalProyectos}
-- Promedio Avance: ${analisis.fisico.promedioAvance}%
-- Estatus de Proyectos: ${JSON.stringify(analisis.fisico.proyectosPorEstatus)}
-
-INDICADORES DE COBERTURA
-- Total Localidades: ${analisis.cobertura.totalLocalidades}
-- Distribución: ${analisis.cobertura.distribucionGeografica}
-- Concentración de Inversión: ${analisis.cobertura.porcentajeConcentracion}%
-
-INDICADORES DE EJECUCIÓN
-- Total Instituciones Ejecutoras: ${analisis.ejecucion.totalEjecutoras}
-- Total Contratistas: ${analisis.ejecucion.totalContratistas}
-- Total Convocantes: ${analisis.ejecucion.totalConvocantes}
-
-BENEFICIARIOS
-- Total Mujeres: ${formatNumber(analisis.beneficiarios.totalMujeres)}
-- Total Hombres: ${formatNumber(analisis.beneficiarios.totalHombres)}
-- Ratio Mujeres: ${analisis.beneficiarios.ratioMujeres}%
-
-TEMPORALIDAD
-- Promedio Tiempo Ejecución: ${analisis.temporal.promedioTiempoEjecucion} meses
-- Mes con más Inicios: ${analisis.temporal.mesMasInicios}
-- Mes con más Términos: ${analisis.temporal.mesMasTerminos}
-
-Nota: Para este análisis, cuando se mencionen unidades territoriales, usar el término "${terminoGeografico}" ya que los datos corresponden a ${estado}.
-Proporciona un análisis estructurado con las siguientes secciones claramente delimitadas:
-
-1. RESUMEN EJECUTIVO
-[Resumen conciso de los hallazgos principales y conclusiones clave]
-
-2. EFICIENCIA EN LA EJECUCIÓN DEL PRESUPUESTO
-[Análisis detallado del ejercicio presupuestal y su eficiencia]
-
-3. IMPACTO Y ALCANCE DE LOS PROYECTOS
-[Evaluación del alcance territorial y beneficiarios]
-
-4. EQUIDAD Y DISTRIBUCIÓN
-[Análisis de la distribución de recursos y beneficiarios]
-
-5. ÁREAS DE OPORTUNIDAD Y RECOMENDACIONES
-[Tu análisis aquí]
-
-Notas importantes:
-- Cada sección debe estar claramente separada
-- Usa datos específicos para respaldar el análisis
-- Incluye porcentajes y cifras relevantes
-- Mantén un tono técnico pero comprensible
-- Enfócate en conclusiones accionables
-- No repitas los títulos de las secciones
-- No uses símbolos especiales como #
-- Escribe párrafos concisos y bien estructurados
-- Usa datos específicos para respaldar el análisis`;
-
-        const response = await fetch(`${CONFIG.AZURE_OPENAI_ENDPOINT}/openai/deployments/${CONFIG.AZURE_OPENAI_DEPLOYMENT_NAME}/chat/completions?api-version=${CONFIG.AZURE_OPENAI_API_VERSION}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'api-key': CONFIG.AZURE_OPENAI_API_KEY
-            },
-            body: JSON.stringify({
-                messages: [
-                    { 
-                        role: "system", 
-                        content: "Eres un analista experto en fondos públicos y desarrollo social, especializado en el análisis del FAIS. Tu objetivo es proporcionar análisis detallados y estructurados que ayuden a la toma de decisiones."
-                    },
-                    { role: "user", content: prompt }
-                ],
-                temperature: 0.7,
-                max_tokens: 2000,
-                top_p: 0.95,
-                frequency_penalty: 0,
-                presence_penalty: 0
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error(`Error en la API: ${response.status}`);
-        }
-
-        const result = await response.json();
-        return result.choices[0].message.content;
-    } catch (error) {
-        console.error('Error al obtener análisis de OpenAI:', error);
-        return "No se pudo generar el análisis automático. Por favor, intente nuevamente.";
-    }
-}
-async function generarInforme(data, programa) {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const estado = document.getElementById('estado').value;
-    const esCDMX = estado === 'Ciudad de México';
-    const terminoGeografico = esCDMX ? 'Alcaldía' : 'Municipio';
-    
-    const filtros = {
-        ciclo: document.getElementById('ciclo').value,
-        programa,
-        estado,
-        municipio: document.getElementById('municipio').value
-    };
-    
-    const esEstatal = programa === 'I003-FAIS Entidades';
-
-    // Función para centrar texto
-    function centrarTexto(doc, texto, y, size) {
-        const textWidth = doc.getStringUnitWidth(texto) * size / doc.internal.scaleFactor;
-        const pageWidth = doc.internal.pageSize.width;
-        return (pageWidth - textWidth) / 2;
-    }
-
-    // Función para dividir título en dos líneas
-    function dividirTitulo(programa) {
-        if (programa === 'I003-FAIS Entidades') {
-            return ['Análisis', programa];
-        } else if (programa === 'I004-FAIS Municipal y de las Demarcaciones Territoriales del Distrito Federal') {
-            return ['Análisis I004-FAIS Municipal y de las', 'Demarcaciones Territoriales del Distrito Federal'];
-        } else {
-            return ['Análisis', programa];
-        }
-    }
-
-    // Función para formatear texto en párrafos
-    function formatearParrafo(texto, maxWidth) {
-        const words = texto.split(' ');
-        const lines = [];
-        let currentLine = words[0];
-
-        for (let i = 1; i < words.length; i++) {
-            const word = words[i];
-            const width = doc.getStringUnitWidth(currentLine + ' ' + word) * 10 / doc.internal.scaleFactor;
-            if (width < maxWidth) {
-                currentLine += ' ' + word;
-            } else {
-                lines.push(currentLine);
-                currentLine = word;
-            }
-        }
-        lines.push(currentLine);
-        return lines;
-    }
-
-    // Análisis completo
-    const analisis = {
-        financiero: analizarFinanciero(data),
-        fisico: analizarFisico(data),
-        inversion: analizarInversion(data),
-        ejecucion: analizarEjecucion(data),
-        cobertura: analizarCobertura(data, esEstatal),
-        beneficiarios: analizarBeneficiarios(data),
-        temporal: analizarTemporal(data)
-    };
-
-    // Primera página - Indicadores
-    doc.setFontSize(16);
-    let yPos = 20;
-    const lineasTitulo = dividirTitulo(programa);
-    
-    lineasTitulo.forEach(linea => {
-        const xCentrado = centrarTexto(doc, linea, yPos, 16);
-        doc.text(linea, xCentrado, yPos);
-        yPos += 10;
-    });
-
-    // Información de filtros con término correcto
-    doc.setFontSize(12);
-    const infoFiltros = `Ciclo: ${filtros.ciclo} | Estado: ${filtros.estado}${filtros.municipio ? ` | ${terminoGeografico}: ${filtros.municipio}` : ''}`;
-    const xCentradoFiltros = centrarTexto(doc, infoFiltros, yPos, 12);
-    doc.text(infoFiltros, xCentradoFiltros, yPos);
-    yPos += 10;
-
-    // A. Indicadores Financieros
-    doc.setFontSize(14);
-    doc.text('A. Indicadores Financieros', 20, yPos);
-    yPos += 8;
-    doc.setFontSize(10);
-    doc.text(`• Total Aprobado: $${formatNumber(analisis.financiero.totalAprobado)}`, 30, yPos); yPos += 6;
-    doc.text(`• Total Ejercido: $${formatNumber(analisis.financiero.totalEjercido)}`, 30, yPos); yPos += 6;
-    doc.text(`• Total Pagado: $${formatNumber(analisis.financiero.totalPagado)}`, 30, yPos); yPos += 6;
-    doc.text(`• % Ejercido vs Aprobado: ${analisis.financiero.porcentajeEjercido}%`, 30, yPos); yPos += 6;
-    doc.text(`• % Pagado vs Aprobado: ${analisis.financiero.porcentajePagado}%`, 30, yPos); yPos += 10;
-
-    // B. Indicadores Físicos
-    doc.setFontSize(14);
-    doc.text('B. Indicadores Físicos', 20, yPos);
-    yPos += 8;
-    doc.setFontSize(10);
-    doc.text(`• Total Proyectos: ${analisis.fisico.totalProyectos}`, 30, yPos); yPos += 6;
-    doc.text(`• Promedio Avance Físico: ${analisis.fisico.promedioAvance}%`, 30, yPos); yPos += 6;
-    doc.text(`• Proyectos por Estatus:`, 30, yPos); yPos += 6;
-    Object.entries(analisis.fisico.proyectosPorEstatus).forEach(([estatus, cantidad]) => {
-        doc.text(`  - ${estatus}: ${cantidad}`, 35, yPos); yPos += 6;
-    });
-    yPos += 4;
-
-    // C. Indicadores de Inversión
-    doc.setFontSize(14);
-    doc.text('C. Indicadores de Inversión', 20, yPos);
-    yPos += 8;
-    doc.setFontSize(10);
-    doc.text(`• Distribución por Categoría:`, 30, yPos); yPos += 6;
-    Object.entries(analisis.inversion.porCategoria).forEach(([cat, monto]) => {
-        const porcentaje = (monto / analisis.financiero.totalAprobado * 100).toFixed(2);
-        doc.text(`  - ${cat}: ${porcentaje}%`, 35, yPos); yPos += 6;
-    });
-    yPos += 4;
-
-    // D. Indicadores de Ejecución
-    doc.setFontSize(14);
-    doc.text('D. Indicadores de Ejecución', 20, yPos);
-    yPos += 8;
-    doc.setFontSize(10);
-    doc.text(`• Total Instituciones Ejecutoras: ${analisis.ejecucion.totalEjecutoras}`, 30, yPos); yPos += 6;
-    doc.text(`• Total Contratistas: ${analisis.ejecucion.totalContratistas}`, 30, yPos); yPos += 6;
-    doc.text(`• Total Tipos de Convocantes: ${analisis.ejecucion.totalConvocantes}`, 30, yPos); yPos += 10;
-
-    // E. Indicadores de Cobertura
-    doc.setFontSize(14);
-    doc.text('E. Indicadores de Cobertura', 20, yPos);
-    yPos += 8;
-    doc.setFontSize(10);
-    doc.text(`• Total Localidades Beneficiadas: ${analisis.cobertura.totalLocalidades}`, 30, yPos); yPos += 6;
-    doc.text(`• Distribución Geográfica: ${analisis.cobertura.distribucionGeografica}`, 30, yPos); yPos += 6;
-    doc.text(`• Concentración de Inversión: ${analisis.cobertura.porcentajeConcentracion}%`, 30, yPos); yPos += 10;
-
-    // F. Indicadores de Beneficiarios
-    doc.setFontSize(14);
-    doc.text('F. Indicadores de Beneficiarios', 20, yPos);
-    yPos += 8;
-    doc.setFontSize(10);
-    doc.text(`• Total Mujeres: ${formatNumber(analisis.beneficiarios.totalMujeres)}`, 30, yPos); yPos += 6;
-    doc.text(`• Total Hombres: ${formatNumber(analisis.beneficiarios.totalHombres)}`, 30, yPos); yPos += 6;
-    doc.text(`• Ratio Mujeres/Hombres: ${analisis.beneficiarios.ratioMujeres}%`, 30, yPos); yPos += 10;
-
-    // G. Indicadores Temporales
-    doc.setFontSize(14);
-    doc.text('G. Indicadores Temporales', 20, yPos);
-    yPos += 8;
-    doc.setFontSize(10);
-    doc.text(`• Promedio Tiempo Ejecución: ${analisis.temporal.promedioTiempoEjecucion} meses`, 30, yPos); yPos += 6;
-    doc.text(`• Mes con más Inicios: ${analisis.temporal.mesMasInicios}`, 30, yPos); yPos += 6;
-    doc.text(`• Mes con más Términos: ${analisis.temporal.mesMasTerminos}`, 30, yPos); yPos += 10;
-
-    // Nueva página para el análisis de OpenAI
-    doc.addPage();
-    yPos = 20;
-
-    // Título del análisis
-    doc.setFontSize(16);
-    doc.setFont(undefined, 'bold');
-    const tituloAnalisis = 'H. Análisis Detallado';
-    const xCentradoAnalisis = centrarTexto(doc, tituloAnalisis, yPos, 16);
-    doc.text(tituloAnalisis, xCentradoAnalisis, yPos);
-    yPos += 15;
-
-    try {
-        const analisisOpenAI = await obtenerAnalisisOpenAI(data, analisis);
-        
-        // Limpieza inicial del texto
-        const contenidoLimpio = analisisOpenAI
-            .replace(/#{2,}/g, '')
-            .replace(/([A-Z\s]+)\n\1/g, '$1')
-            .replace(/\n+/g, '\n')
-            .replace(/^\d+\.\s*/gm, '') // Eliminar números al inicio de línea
-            .trim()
-            .replace(/municipio/gi, esCDMX ? 'alcaldía' : 'municipio')
-            .replace(/municipios/gi, esCDMX ? 'alcaldías' : 'municipios');
-
-        // Dividir en secciones principales con números romanos
-        const titulos = [
-            'I. RESUMEN EJECUTIVO',
-            'II. EFICIENCIA EN LA EJECUCIÓN DEL PRESUPUESTO', 
-            'III. IMPACTO Y ALCANCE DE LOS PROYECTOS',
-            'IV. EQUIDAD Y DISTRIBUCIÓN',
-            'V. ÁREAS DE OPORTUNIDAD Y RECOMENDACIONES'
-        ];
-
-        const secciones = contenidoLimpio.split(/(?=RESUMEN EJECUTIVO|EFICIENCIA EN LA EJECUCIÓN|IMPACTO Y ALCANCE|EQUIDAD Y DISTRIBUCIÓN|ÁREAS DE OPORTUNIDAD)/);
-
-        secciones.forEach((seccion, index) => {
-            if (!seccion.trim()) return;
-
-            if (yPos > 250) {
-                doc.addPage();
-                yPos = 20;
+            document.getElementById('errorMessage').style.display = 'none';
+            const municipioSelect = document.getElementById('municipio');
+            const etiquetaSelector = esCDMX ? 'Alcaldía' : 'Municipio';
+            
+            municipioSelect.innerHTML = `<option value="">Selecciona ${etiquetaSelector}</option>`;
+            
+            if (!programa || programa === 'I003-FAIS Entidades') {
+                municipioSelect.disabled = true;
+                document.getElementById('municipioContainer').style.display = 
+                    programa === 'I003-FAIS Entidades' ? 'none' : 'block';
+                return;
             }
 
-            // Procesar título y contenido
-            const [_titulo, ...contenidoArray] = seccion.split('\n').map(s => s.trim()).filter(Boolean);
-            
-            // Usar título numerado
-            const titulo = titulos[index] || _titulo;
-            
-            // Título de la sección
-            doc.setFontSize(12);
-            doc.setFont(undefined, 'bold');
-            doc.text(titulo, 20, yPos);
-            yPos += 8;
-
-            // Contenido de la sección
-            doc.setFont(undefined, 'normal');
-            doc.setFontSize(10);
-
-            // Unir todo el contenido y dividir en párrafos reales
-            const contenido = contenidoArray.join(' ')
-                .replace(/\s+/g, ' ')
-                .replace(/\.\s+/g, '.|') // Marcar finales de oración
-                .split('|')
-                .map(p => p.trim())
-                .filter(Boolean);
-
-            contenido.forEach(parrafo => {
-                if (!parrafo) return;
-                
-                const palabras = parrafo.split(' ');
-                let lineaActual = '';
-                const maxWidth = 170;
-
-                for (const palabra of palabras) {
-                    const lineaPrueba = lineaActual + (lineaActual ? ' ' : '') + palabra;
-                    const width = doc.getStringUnitWidth(lineaPrueba) * 10 / doc.internal.scaleFactor;
-
-                    if (width > maxWidth) {
-                        doc.text(lineaActual, 20, yPos);
-                        yPos += 6;
-                        lineaActual = palabra;
-                    } else {
-                        lineaActual = lineaPrueba;
-                    }
+            if (programa.includes('I004') || programa.includes('I005')) {
+                if (municipios.length > 0) {
+                    municipioSelect.disabled = false;
+                    document.getElementById('municipioContainer').style.display = 'block';
+                    municipios.forEach(municipio => {
+                        const opt = document.createElement('option');
+                        opt.value = municipio;
+                        opt.textContent = municipio;
+                        municipioSelect.appendChild(opt);
+                    });
+                } else {
+                    document.getElementById('errorMessage').textContent = 
+                        `No se encontraron ${esCDMX ? 'alcaldías' : 'municipios'} para el programa ${programa}`;
+                    document.getElementById('errorMessage').style.display = 'block';
+                    municipioSelect.disabled = true;
                 }
-
-                if (lineaActual) {
-                    doc.text(lineaActual, 20, yPos);
-                    yPos += 6;
-                }
-
-                yPos += 4; // Espacio entre párrafos
-            });
-
-            yPos += 10; // Espacio entre secciones
-        });
-
-    } catch (error) {
-        console.error('Error al generar el análisis:', error);
-        doc.setFontSize(10);
-        doc.setFont(undefined, 'normal');
-        doc.text('No se pudo generar el análisis automático. Por favor, intente nuevamente.', 20, yPos);
-    }
-
-    // Guardar el PDF con nombre correcto
-    const nombreArchivo = `${filtros.ciclo}_${programa.split('-')[1]}_${filtros.estado}_${esCDMX ? 'Alcaldia' : 'Municipio'}_${filtros.municipio}.pdf`;
-    doc.save(nombreArchivo);
-}
-        // Event Listeners
-        document.getElementById('ciclo').addEventListener('change', function() {
-            document.getElementById('municipio').value = '';
-            updateMunicipios();
-            filterData();
-        });
-
-// Modificar el event listener del programa
-document.getElementById('programa').addEventListener('change', function() {
-    const programa = this.value;
-    console.log('Programa seleccionado:', programa);
-    console.log('Datos disponibles al cambiar programa:', fullData.length);
-    console.log('Muestra de datos:', fullData.slice(0, 1));
-    
-    document.getElementById('municipio').value = '';
-    
-    if (programa === 'I003-FAIS Entidades') {
-        document.getElementById('municipioContainer').style.display = 'none';
-        document.getElementById('municipio').disabled = true;
-    } else {
-        document.getElementById('municipioContainer').style.display = 'block';
-        updateMunicipios();
-    }
-    
-    filterData();
-});
-        // Modificar el event listener del estado para incluir el mapeo correcto
-        document.getElementById('estado').addEventListener('change', async function() {
-            try {
-                const estadoSeleccionado = this.value;
-                if (estadoSeleccionado) {
-                    document.getElementById('loadingMessage').style.display = 'block';
-                    
-                    fullData = await fetchExcelData(estadoSeleccionado);
-                    
-                    // Asegurarse de que los datos tienen el formato correcto
-                    fullData = fullData.map(item => ({
-                        ...item,
-                        'CICLO DEL RECURSO': Number(item['CICLO DEL RECURSO']),
-                        APROBADO: Number(item.APROBADO) || 0,
-                        EJERCIDO: Number(item.EJERCIDO) || 0,
-                        PAGADO: Number(item.PAGADO) || 0
-                    }));
-                    
-                    const ciclos = [...new Set(fullData
-                        .map(item => item['CICLO DEL RECURSO'])
-                        .filter(Boolean)
-                    )];
-                    
-                    const programas = [...new Set(fullData
-                        .map(item => item['PROGRAMA PRESUPUESTARIO'])
-                        .filter(Boolean)
-                    )];
-                    
-                    console.log('Ciclos disponibles:', ciclos);
-                    console.log('Programas disponibles:', programas);
-                    
-                    populateSelect('ciclo', ciclos.sort((a, b) => b - a));
-                    populateSelect('programa', programas.sort());
-                    
-                    document.getElementById('loadingMessage').style.display = 'none';
-                }
-                
-                document.getElementById('municipio').value = '';
-                updateMunicipios();
-                filterData();
-                
-            } catch (error) {
-                document.getElementById('loadingMessage').style.display = 'none';
-                console.error('Error al cargar datos del estado:', error);
             }
-        });
 
-        // Agregar el event listener
-        document.getElementById('limpiarFiltros').addEventListener('click', limpiarFiltros);
+            checkFiltersAndEnableButtons();
+        }
 
-        document.getElementById('municipio').addEventListener('change', filterData);
+        function filterData() {
+            const ciclo = document.getElementById('ciclo').value;
+            const programa = document.getElementById('programa').value;
+            const estado = document.getElementById('estado').value;
+            const municipio = document.getElementById('municipio').value;
+            
+            filteredData = fullData.filter(item => {
+                const matchCiclo = !ciclo || item['CICLO DEL RECURSO'] === Number(ciclo);
+                const matchPrograma = !programa || item['PROGRAMA PRESUPUESTARIO'] === programa;
+                const matchEstado = !estado || item.NOMBRE_ENTIDAD === estado;
+                const matchMunicipio = !municipio || 
+                                     programa === 'I003-FAIS Entidades' || 
+                                     item.NOMBRE_MUNICIPIO === municipio;
+                
+                return matchCiclo && matchPrograma && matchEstado && matchMunicipio;
+            });
+            
+            checkFiltersAndEnableButtons();
+        }
 
-        document.getElementById('generarAnalisis').addEventListener('click', async function() {
-    const boton = this;
-    const textoOriginal = boton.textContent;
-    
-    try {
-        boton.classList.add('generating-analysis', 'button-loading');
-        boton.textContent = 'Generando análisis';
-        boton.disabled = true;
-        
-        const programa = document.getElementById('programa').value;
-        await generarInforme(filteredData, programa);
-        
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Ocurrió un error al generar el informe. Por favor, intente nuevamente.');
-    } finally {
-        boton.classList.remove('generating-analysis', 'button-loading');
-        boton.textContent = textoOriginal;
-        boton.disabled = false;
-    }
-});
-        // Inicialización
-        initialize();
-        document.getElementById('exportarExcel').addEventListener('click', function() {
-    const boton = this;
-    const textoOriginal = boton.textContent;
-    
-    try {
-        boton.classList.add('generating-analysis', 'button-loading');
-        boton.textContent = 'Exportando datos';
-        boton.disabled = true;
-
-        // Crear un nuevo libro de trabajo
-        const wb = XLSX.utils.book_new();
-        
-        // Preparar los datos para la exportación
-        const dataToExport = filteredData.map(item => ({
-            'Folio': item['FOLIO'],  // Agregando el campo Folio
-            'Ciclo del Recurso': item['CICLO DEL RECURSO'],
-            'Programa Presupuestario': item['PROGRAMA PRESUPUESTARIO'],
-            'Estado': item['NOMBRE_ENTIDAD'],
-            'Municipio': item['NOMBRE_MUNICIPIO'],
-            'Localidad': item['LOCALIDAD'],
-            'Monto Aprobado': item['APROBADO'],
-            'Monto Ejercido': item['EJERCIDO'],
-            'Monto Pagado': item['PAGADO'],
-            'Estatus': item['ESTATUS'],
-            'Porcentaje Avance': item['PORCENTAJE'],
-            'Institución Ejecutora': item['INSTITUCION_EJECUTORA'],
-            'Contratista': item['CONTRATISTA'],
-            'Convocante': item['CONVOCANTE'],
-            'Categoría': item['CATEGORIA'],
-            'Tipo de Programa': item['TIPO_PROGRAMA_PROYECTO'],
-            'Clasificación': item['CLASIFICACION'],
-            'Beneficiarios Mujeres': item['MUJERES'],
-            'Beneficiarios Hombres': item['HOMBRES'],
-            'Fecha Inicio': item['FECHA_INICIO'],
-            'Fecha Término': item['FECHA_TERMINO']
-        }));
-
-        // Crear una hoja de trabajo con los datos
-        const ws = XLSX.utils.json_to_sheet(dataToExport);
-
-        // Ajustar el ancho de las columnas
-        const wscols = Object.keys(dataToExport[0]).map(() => ({ wch: 20 }));
-        ws['!cols'] = wscols;
-
-        // Añadir la hoja al libro
-        XLSX.utils.book_append_sheet(wb, ws, "Datos FAIS");
-
-        // Generar el nombre del archivo
-        const filtros = {
-            ciclo: document.getElementById('ciclo').value,
-            programa: document.getElementById('programa').value.split('-')[1],
-            estado: document.getElementById('estado').value,
-            municipio: document.getElementById('municipio').value
+        // Mapeo de estados
+        const estadosMapping = {
+            'Aguascalientes': 'FAIS_Aguascalientes.xlsx',
+            'Baja California': 'FAIS_Baja_California.xlsx',
+            'Baja California Sur': 'FAIS_Baja_California_Sur.xlsx',
+            'Campeche': 'FAIS_Campeche.xlsx',
+            'Chiapas': 'FAIS_Chiapas.xlsx',
+            'Chihuahua': 'FAIS_Chihuahua.xlsx',
+            'Ciudad de México': 'FAIS_Ciudad_de_México.xlsx',
+            'Coahuila de Zaragoza': 'FAIS_Coahuila_de_Zaragoza.xlsx',
+            'Colima': 'FAIS_Colima.xlsx',
+            'Durango': 'FAIS_Durango.xlsx',
+            'Guanajuato': 'FAIS_Guanajuato.xlsx',
+            'Guerrero': 'FAIS_Guerrero.xlsx',
+            'Hidalgo': 'FAIS_Hidalgo.xlsx',
+            'Jalisco': 'FAIS_Jalisco.xlsx',
+            'México': 'FAIS_México.xlsx',
+            'Michoacán de Ocampo': 'FAIS_Michoacán_de_Ocampo.xlsx',
+            'Morelos': 'FAIS_Morelos.xlsx',
+            'Nayarit': 'FAIS_Nayarit.xlsx',
+            'Nuevo León': 'FAIS_Nuevo_León.xlsx',
+            'Oaxaca': 'FAIS_Oaxaca.xlsx',
+            'Puebla': 'FAIS_Puebla.xlsx',
+            'Querétaro': 'FAIS_Querétaro.xlsx',
+            'Quintana Roo': 'FAIS_Quintana_Roo.xlsx',
+            'San Luis Potosí': 'FAIS_San_Luis_Potosí.xlsx',
+            'Sinaloa': 'FAIS_Sinaloa.xlsx',
+            'Sonora': 'FAIS_Sonora.xlsx',
+            'Tabasco': 'FAIS_Tabasco.xlsx',
+            'Tamaulipas': 'FAIS_Tamaulipas.xlsx',
+            'Tlaxcala': 'FAIS_Tlaxcala.xlsx',
+            'Veracruz de Ignacio de la Llave': 'FAIS_Veracruz_de_Ignacio_de_la_Llave.xlsx',
+            'Yucatán': 'FAIS_Yucatán.xlsx',
+            'Zacatecas': 'FAIS_Zacatecas.xlsx'
         };
-        
-        const nombreArchivo = `${filtros.ciclo}_${filtros.programa}_${filtros.estado}${filtros.municipio ? '_' + filtros.municipio : ''}.xlsx`;
 
-        // Exportar el archivo
-        XLSX.writeFile(wb, nombreArchivo);
-        
-    } catch (error) {
-        console.error('Error al exportar a Excel:', error);
-        alert('Ocurrió un error al exportar los datos. Por favor, intente nuevamente.');
-    } finally {
-        boton.classList.remove('generating-analysis', 'button-loading');
-        boton.textContent = textoOriginal;
-        boton.disabled = false;
-    }
-});
+        // Funciones de análisis y exportación
+        async function fetchExcelData(estado) {
+            try {
+                const fileName = estadosMapping[estado];
+                if (!fileName) {
+                    throw new Error(`Archivo no encontrado para el estado: ${estado}`);
+                }
+
+                const fullUrl = `${baseUrl}${fileName}?${sasToken}`;
+                const response = await fetch(fullUrl);
+                if (!response.ok) {
+                    throw new Error(`Error HTTP: ${response.status}`);
+                }
+                
+                const arrayBuffer = await response.arrayBuffer();
+                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const data = XLSX.utils.sheet_to_json(firstSheet);
+                
+                if (data.length === 0) {
+                    throw new Error(`No se encontraron datos para el estado: ${estado}`);
+                }
+
+                return data.map(row => ({
+                    ...row,
+                    'CICLO DEL RECURSO': Number(row['CICLO DEL RECURSO']) || 0,
+                    APROBADO: Number(row.APROBADO) || 0,
+                    EJERCIDO: Number(row.EJERCIDO) || 0,
+                    PAGADO: Number(row.PAGADO) || 0,
+                    NOMBRE_ENTIDAD: row.NOMBRE_ENTIDAD || '',
+                    NOMBRE_MUNICIPIO: row.NOMBRE_MUNICIPIO || row.MUNICIPIO || ''
+                }));
+            } catch (error) {
+                console.error('Error al cargar datos:', error);
+                document.getElementById('errorMessage').textContent = `Error al cargar los datos de ${estado}: ${error.message}`;
+                document.getElementById('errorMessage').style.display = 'block';
+                throw error;
+            }
+        }
+
+        function exportarDatosExcel() {
+            const wb = XLSX.utils.book_new();
+            const dataToExport = filteredData.map(item => ({
+                'Folio': item['FOLIO'],
+                'Ciclo del Recurso': item['CICLO DEL RECURSO'],
+                'Programa Presupuestario': item['PROGRAMA PRESUPUESTARIO'],
+                'Estado': item['NOMBRE_ENTIDAD'],
+                'Municipio': item['NOMBRE_MUNICIPIO'],
+                'Localidad': item['LOCALIDAD'],
+                'Monto Aprobado': item['APROBADO'],
+                'Monto Ejercido': item['EJERCIDO'],
+                'Monto Pagado': item['PAGADO'],
+                'Estatus': item['ESTATUS'],
+                'Porcentaje Avance': item['PORCENTAJE'],
+                'Institución Ejecutora': item['INSTITUCION_EJECUTORA'],
+                'Contratista': item['CONTRATISTA'],
+                'Convocante': item['CONVOCANTE'],
+                'Categoría': item['CATEGORIA'],
+                'Tipo de Programa': item['TIPO_PROGRAMA_PROYECTO'],
+                'Clasificación': item['CLASIFICACION'],
+                'Beneficiarios Mujeres': item['MUJERES'],
+                'Beneficiarios Hombres': item['HOMBRES'],
+                'Fecha Inicio': item['FECHA_INICIO'],
+                'Fecha Término': item['FECHA_TERMINO']
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(dataToExport);
+            ws['!cols'] = Object.keys(dataToExport[0]).map(() => ({ wch: 20 }));
+            XLSX.utils.book_append_sheet(wb, ws, "Datos FAIS");
+
+            const filtros = {
+                ciclo: document.getElementById('ciclo').value,
+                programa: document.getElementById('programa').value.split('-')[1],
+                estado: document.getElementById('estado').value,
+                municipio: document.getElementById('municipio').value
+            };
+            
+            const nombreArchivo = `${filtros.ciclo}_${filtros.programa}_${filtros.estado}${filtros.municipio ? '_' + filtros.municipio : ''}.xlsx`;
+            XLSX.writeFile(wb, nombreArchivo);
+        }
+
+        // Función de formato
+        function formatNumber(number) {
+            return new Intl.NumberFormat('es-MX', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(number);
+        }
     </script>
 </body>
 </html>
