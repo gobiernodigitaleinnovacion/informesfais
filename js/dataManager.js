@@ -8,10 +8,17 @@ async function fetchExcelData(estado) {
             throw new Error(`Archivo no encontrado para el estado: ${estado}`);
         }
 
-        const fullUrl = `${baseUrl}${fileName}?${sasToken}`;
+        // Usar el proxy CORS
+        const fullUrl = `${corsProxyUrl}${encodeURIComponent(baseUrl + fileName + '?' + sasToken)}`;
         console.log('Intentando cargar:', fullUrl);
 
-        const response = await fetch(fullUrl);
+        const response = await fetch(fullUrl, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json, text/plain, */*',
+            }
+        });
+
         if (!response.ok) {
             throw new Error(`Error HTTP: ${response.status} - ${response.statusText}`);
         }
@@ -35,13 +42,6 @@ async function fetchExcelData(estado) {
             NOMBRE_ENTIDAD: row.NOMBRE_ENTIDAD || '',
             NOMBRE_MUNICIPIO: row.NOMBRE_MUNICIPIO || row.MUNICIPIO || ''
         }));
-
-        console.log('Datos normalizados:', {
-            total: dataNormalizada.length,
-            muestra: dataNormalizada.slice(0, 3),
-            estados: [...new Set(dataNormalizada.map(d => d.NOMBRE_ENTIDAD))],
-            programas: [...new Set(dataNormalizada.map(d => d['PROGRAMA PRESUPUESTARIO']))]
-        });
 
         return dataNormalizada;
     } catch (error) {
