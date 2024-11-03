@@ -20,29 +20,9 @@ Esta aplicación web permite analizar datos del FAIS por estado, año y programa
 - JavaScript (ES6+)
 - GitHub Pages para el despliegue
 
-## Instalación Local
+## Acceso a la Aplicación
 
-1. Clonar el repositorio:
-   ```bash
-   git clone https://github.com/[tu-usuario]/analisis-fais
-   ```
-
-2. Navegar al directorio del proyecto:
-   ```bash
-   cd analisis-fais
-   ```
-
-3. Abrir `src/index.html` en tu navegador web preferido
-
-## Despliegue en GitHub Pages
-
-1. Ve a la configuración del repositorio en GitHub
-2. Navega a la sección "Pages"
-3. En "Source", selecciona la rama principal (main o master)
-4. En la carpeta, selecciona "src"
-5. Guarda los cambios
-
-La aplicación estará disponible en: https://[tu-usuario].github.io/analisis-fais/
+La aplicación está disponible en: https://gobiernodigitaleinnovacion.github.io/informesfais/
 
 ## Uso
 
@@ -51,6 +31,20 @@ La aplicación estará disponible en: https://[tu-usuario].github.io/analisis-fa
 3. Selecciona el programa (FISE o FISMDF)
 4. Haz clic en "Generar Análisis" para ver los resultados
 5. Utiliza el botón "Exportar Datos" para descargar los datos en formato CSV
+
+## Instalación Local
+
+1. Clonar el repositorio:
+   ```bash
+   git clone https://github.com/gobiernodigitaleinnovacion/informesfais.git
+   ```
+
+2. Navegar al directorio del proyecto:
+   ```bash
+   cd informesfais
+   ```
+
+3. Abrir `src/index.html` en tu navegador web preferido
 
 ## Contribuir
 
@@ -63,3 +57,9 @@ La aplicación estará disponible en: https://[tu-usuario].github.io/analisis-fa
 ## Licencia
 
 Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para más detalles.
+
+## Contacto
+
+Para más información o soporte:
+- Email: juanheriberto.rosas@gobiernodigitaleinnovacion.com
+- Web: www.gobiernodigitaleinnovacion.com
