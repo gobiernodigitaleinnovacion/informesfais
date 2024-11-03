@@ -8,17 +8,11 @@ async function fetchExcelData(estado) {
             throw new Error(`Archivo no encontrado para el estado: ${estado}`);
         }
 
-        // Usar el proxy CORS
-        const fullUrl = `${corsProxyUrl}${encodeURIComponent(baseUrl + fileName + '?' + sasToken)}`;
-        console.log('Intentando cargar:', fullUrl);
-
-        const response = await fetch(fullUrl, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json, text/plain, */*',
-            }
-        });
-
+        // Usar proxy CORS.io
+        const blobUrl = `${baseUrl}${fileName}?${sasToken}`;
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(blobUrl)}`;
+        
+        const response = await fetch(proxyUrl);
         if (!response.ok) {
             throw new Error(`Error HTTP: ${response.status} - ${response.statusText}`);
         }
@@ -32,7 +26,6 @@ async function fetchExcelData(estado) {
             throw new Error(`No se encontraron datos para el estado: ${estado}`);
         }
 
-        // Normalización de datos
         const dataNormalizada = data.map(row => ({
             ...row,
             'CICLO DEL RECURSO': Number(row['CICLO DEL RECURSO']) || 0,
