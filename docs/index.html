@@ -1,37 +1,709 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Análisis FAIS</title>
-    <link rel="stylesheet" href="css/styles.css">
+   <meta charset="UTF-8">
+   <title>Análisis FAIS</title>
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+   <style>
+       :root {
+           --primary-color: #0066cc;
+       }
+
+       body { 
+           font-family: 'Segoe UI', Arial, sans-serif; 
+           background-color: #f8f9fa;
+           margin: 0;
+           padding: 20px;
+       }
+
+       .app-container {
+           max-width: 1200px;
+           margin: 0 auto;
+           background: white;
+           padding: 2rem;
+           border-radius: 12px;
+           box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+       }
+
+       .app-header {
+           margin-bottom: 2rem;
+           padding-bottom: 1rem;
+           border-bottom: 2px solid #eee;
+       }
+
+       .app-title {
+           color: var(--primary-color);
+           font-size: 1.5rem;
+           margin: 0;
+       }
+
+       .filters { 
+           display: grid;
+           grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+           gap: 1rem;
+           margin-bottom: 2rem;
+           background: white;
+           padding: 1.5rem;
+           border-radius: 8px;
+       }
+
+       select { 
+           width: 100%;
+           padding: 0.75rem;
+           border: 1px solid #ddd;
+           border-radius: 6px;
+           font-size: 0.9rem;
+           transition: all 0.3s ease;
+       }
+
+       select:hover {
+           border-color: #0066cc;
+       }
+
+       select:disabled {
+           background-color: #f5f5f5;
+           cursor: not-allowed;
+       }
+
+       .button-container {
+           display: flex;
+           gap: 1rem;
+           margin-top: 2rem;
+       }
+
+       button {
+           display: inline-flex;
+           align-items: center;
+           gap: 0.5rem;
+           padding: 0.75rem 1.5rem;
+           border: none;
+           border-radius: 6px;
+           font-weight: 500;
+           cursor: pointer;
+           transition: all 0.3s ease;
+       }
+
+       button:disabled {
+           opacity: 0.7;
+           cursor: not-allowed;
+       }
+
+       #generarAnalisis {
+           background-color: #0066cc;
+           color: white;
+       }
+
+       #generarAnalisis:hover:not(:disabled) {
+           background-color: #0052a3;
+       }
+
+       #exportarExcel {
+           background-color: #28a745;
+           color: white;
+       }
+
+       #exportarExcel:hover:not(:disabled) {
+           background-color: #218838;
+       }
+
+       #limpiarFiltros {
+           background-color: #6c757d;
+           color: white;
+       }
+
+       #limpiarFiltros:hover {
+           background-color: #5a6268;
+       }
+
+       .loading {
+           position: fixed;
+           top: 0;
+           left: 0;
+           right: 0;
+           bottom: 0;
+           background: rgba(255,255,255,0.8);
+           display: flex;
+           justify-content: center;
+           align-items: center;
+           z-index: 1000;
+       }
+
+       .loading-spinner {
+           width: 40px;
+           height: 40px;
+           border: 4px solid #f3f3f3;
+           border-top: 4px solid #0066cc;
+           border-radius: 50%;
+           animation: spin 1s linear infinite;
+       }
+
+       @keyframes spin {
+           0% { transform: rotate(0deg); }
+           100% { transform: rotate(360deg); }
+       }
+
+       #errorMessage {
+           background-color: #fff3f3;
+           border: 1px solid #dc3545;
+           color: #dc3545;
+           padding: 1rem;
+           border-radius: 6px;
+           margin: 1rem 0;
+           display: none;
+       }
+
+       .generating-analysis {
+           pointer-events: none;
+           opacity: 0.7;
+       }
+
+       .footer {
+           margin-top: 3rem;
+           padding-top: 2rem;
+           border-top: 2px solid #eee;
+           text-align: center;
+       }
+
+       .footer-content {
+           display: flex;
+           flex-direction: column;
+           gap: 0.5rem;
+           color: #666;
+           font-size: 0.9rem;
+       }
+
+       .footer-content a {
+           color: #0066cc;
+           text-decoration: none;
+           transition: color 0.3s ease;
+       }
+
+       .footer-content a:hover {
+           color: #0052a3;
+       }
+
+       .footer-content i {
+           margin-right: 0.5rem;
+       }
+
+       .copyright {
+           margin-top: 1rem;
+           font-size: 0.8rem;
+           color: #888;
+       }
+   </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Sistema de Análisis FAIS</h1>
-        <div class="filters">
-            <select id="stateSelect">
-                <option value="">Seleccionar Estado</option>
-            </select>
-            <select id="yearSelect">
-                <option value="">Seleccionar Año</option>
-            </select>
-            <select id="programSelect">
-                <option value="">Seleccionar Programa</option>
-            </select>
-        </div>
-        <div class="results">
-            <div id="chart"></div>
-            <div id="table"></div>
-        </div>
-        <div class="actions">
-            <button id="analyzeBtn">Generar Análisis</button>
-            <button id="exportBtn">Exportar Datos</button>
-        </div>
-    </div>
-    <script src="js/config.js"></script>
-    <script src="js/data.js"></script>
-    <script src="js/analysis.js"></script>
-    <script src="js/main.js"></script>
-</body>
-</html>
+   <div class="app-container">
+       <header class="app-header">
+           <h1 class="app-title">Análisis FAIS</h1>
+       </header>
+       <title>Análisis FAIS</title>
+<!-- Librerías necesarias -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+       <div id="loadingMessage" class="loading">
+           <div class="loading-spinner"></div>
+       </div>
+
+       <div id="errorMessage"></div>
+       
+       <div class="filters" id="filtersContainer" style="display: none;">
+           <div class="filter-group">
+               <select id="estado">
+                   <option value="">Selecciona Estado</option>
+               </select>
+           </div>
+           
+           <div class="filter-group">
+               <select id="ciclo">
+                   <option value="">Selecciona Ciclo</option>
+               </select>
+           </div>
+           
+           <div class="filter-group">
+               <select id="programa">
+                   <option value="">Selecciona Programa</option>
+               </select>
+           </div>
+           
+           <div class="filter-group" id="municipioContainer">
+               <select id="municipio" disabled>
+                   <option value="">Selecciona Municipio</option>
+               </select>
+           </div>
+       </div>
+
+       <div class="button-container">
+           <button id="generarAnalisis" disabled>
+               <i class="fas fa-chart-bar"></i>
+               Generar Análisis
+           </button>
+           <button id="exportarExcel" disabled>
+               <i class="fas fa-file-excel"></i>
+               Exportar a Excel
+           </button>
+           <button id="limpiarFiltros">
+               <i class="fas fa-broom"></i>
+               Limpiar Filtros
+           </button>
+       </div>
+
+       <div class="footer">
+           <div class="footer-content">
+               <p>
+                   <a href="mailto:juanheriberto.rosas@gobiernodigitaleinnovacion.com">
+                       <i class="fas fa-envelope"></i> 
+                       juanheriberto.rosas@gobiernodigitaleinnovacion.com
+                   </a>
+               </p>
+               <p>
+                   <a href="https://www.gobiernodigitaleinnovacion.com/" target="_blank">
+                       <i class="fas fa-globe"></i> 
+                       www.gobiernodigitaleinnovacion.com
+                   </a>
+               </p>
+               <p class="copyright">
+                   © 2024 Gobierno Digital e Innovación. Todos los derechos reservados.
+               </p>
+           </div>
+       </div>
+   </div>
+    <script>
+        let fullData = [];
+        let filteredData = [];
+
+        // Mapeo de estados a archivos
+        const estadosMapping = {
+    'Aguascalientes': 'FAIS_Aguascalientes.xlsx',
+    'Baja California': 'FAIS_Baja_California.xlsx',
+    'Baja California Sur': 'FAIS_Baja_California_Sur.xlsx',
+    'Campeche': 'FAIS_Campeche.xlsx',
+    'Chiapas': 'FAIS_Chiapas.xlsx',
+    'Chihuahua': 'FAIS_Chihuahua.xlsx',
+    'Ciudad de México': 'FAIS_Ciudad_de_México.xlsx',
+    'Coahuila de Zaragoza': 'FAIS_Coahuila_de_Zaragoza.xlsx',  // Nombre completo
+    'Colima': 'FAIS_Colima.xlsx',
+    'Durango': 'FAIS_Durango.xlsx',
+    'Guanajuato': 'FAIS_Guanajuato.xlsx',
+    'Guerrero': 'FAIS_Guerrero.xlsx',
+    'Hidalgo': 'FAIS_Hidalgo.xlsx',
+    'Jalisco': 'FAIS_Jalisco.xlsx',
+    'México': 'FAIS_México.xlsx',
+    'Michoacán de Ocampo': 'FAIS_Michoacán_de_Ocampo.xlsx',    // Nombre completo
+    'Morelos': 'FAIS_Morelos.xlsx',
+    'Nayarit': 'FAIS_Nayarit.xlsx',
+    'Nuevo León': 'FAIS_Nuevo_León.xlsx',
+    'Oaxaca': 'FAIS_Oaxaca.xlsx',
+    'Puebla': 'FAIS_Puebla.xlsx',
+    'Querétaro': 'FAIS_Querétaro.xlsx',
+    'Quintana Roo': 'FAIS_Quintana_Roo.xlsx',
+    'San Luis Potosí': 'FAIS_San_Luis_Potosí.xlsx',
+    'Sinaloa': 'FAIS_Sinaloa.xlsx',
+    'Sonora': 'FAIS_Sonora.xlsx',
+    'Tabasco': 'FAIS_Tabasco.xlsx',
+    'Tamaulipas': 'FAIS_Tamaulipas.xlsx',
+    'Tlaxcala': 'FAIS_Tlaxcala.xlsx',
+    'Veracruz de Ignacio de la Llave': 'FAIS_Veracruz_de_Ignacio_de_la_Llave.xlsx', // Nombre completo
+    'Yucatán': 'FAIS_Yucatán.xlsx',
+    'Zacatecas': 'FAIS_Zacatecas.xlsx'
+};
+
+        // Configuración de la URL base y token SAS
+        const baseUrl = 'https://stindicadores.blob.core.windows.net/estados-fais/';
+        const sasToken = 'sp=r&st=2024-10-30T21:15:16Z&se=2026-10-31T05:15:16Z&spr=https&sv=2022-11-02&sr=c&sig=okiG4MWLVsgE37DUov5YBZcbXqjYOd%2BKcOnNh0TYN2s%3D';
+
+        // Configuración de Azure OpenAI
+        const CONFIG = {
+    AZURE_OPENAI_API_KEY: "de7bb7a3b62e409e890737a2a4f7d3be",
+    AZURE_OPENAI_ENDPOINT: "https://opeanaihtmlautomatizados.openai.azure.com/",
+    AZURE_OPENAI_API_VERSION: "2024-02-15-preview",
+    AZURE_OPENAI_DEPLOYMENT_NAME: "gpt-4o-minihtmlautomatizado", // Reemplaza con tu nombre de deployment
+        };
+
+        function formatNumber(number) {
+            return new Intl.NumberFormat('es-MX', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(number);
+        }
+
+        function limpiarFiltros() {
+            // Resetear los selectores
+            document.getElementById('ciclo').value = '';
+            document.getElementById('programa').value = '';
+            document.getElementById('estado').value = '';
+            document.getElementById('municipio').value = '';
+            
+            // Limpiar datos
+            fullData = [];
+            filteredData = [];
+            
+            // Resetear la interfaz
+            document.getElementById('municipioContainer').style.display = 'block';
+            document.getElementById('municipio').disabled = true;
+            
+            // Deshabilitar botones
+            document.getElementById('generarAnalisis').disabled = true;
+            document.getElementById('exportarExcel').disabled = true;
+            
+            // Limpiar mensaje de error si existe
+            document.getElementById('errorMessage').style.display = 'none';
+            
+            // Reinicializar solo los estados
+            initialize();
+        }
+
+        function inspectData(data) {
+            if (data.length > 0) {
+                console.log('Estructura del primer registro:', Object.keys(data[0]));
+                console.log('Muestra del primer registro:', data[0]);
+                
+                // Contar registros por programa
+                const programas = data.reduce((acc, item) => {
+                    const prog = item['PROGRAMA PRESUPUESTARIO'] || 'NO ESPECIFICADO';
+                    acc[prog] = (acc[prog] || 0) + 1;
+                    return acc;
+                }, {});
+                console.log('Conteo por programa:', programas);
+            }
+        }
+
+        async function fetchExcelData(estado) {
+    try {
+        const fileName = estadosMapping[estado];
+        if (!fileName) {
+            throw new Error(`Archivo no encontrado para el estado: ${estado}`);
+        }
+
+        const fullUrl = `${baseUrl}${fileName}?${sasToken}`;
+        console.log('Intentando cargar:', fullUrl);
+
+        const response = await fetch(fullUrl);
+        if (!response.ok) {
+            throw new Error(`Error HTTP: ${response.status} - ${response.statusText}`);
+        }
+        
+        const arrayBuffer = await response.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(firstSheet);
+        
+        if (data.length === 0) {
+            throw new Error(`No se encontraron datos para el estado: ${estado}`);
+        }
+
+        // Normalización de datos
+        const dataNormalizada = data.map(row => ({
+            ...row,
+            'CICLO DEL RECURSO': Number(row['CICLO DEL RECURSO']) || 0,
+            APROBADO: Number(row.APROBADO) || 0,
+            EJERCIDO: Number(row.EJERCIDO) || 0,
+            PAGADO: Number(row.PAGADO) || 0,
+            NOMBRE_ENTIDAD: row.NOMBRE_ENTIDAD || '',
+            NOMBRE_MUNICIPIO: row.NOMBRE_MUNICIPIO || row.MUNICIPIO || ''
+        }));
+
+        console.log('Datos normalizados:', {
+            total: dataNormalizada.length,
+            muestra: dataNormalizada.slice(0, 3),
+            estados: [...new Set(dataNormalizada.map(d => d.NOMBRE_ENTIDAD))],
+            programas: [...new Set(dataNormalizada.map(d => d['PROGRAMA PRESUPUESTARIO']))]
+        });
+
+        return dataNormalizada;
+    } catch (error) {
+        console.error('Error al cargar datos:', error);
+        document.getElementById('errorMessage').textContent = `Error al cargar los datos de ${estado}: ${error.message}`;
+        document.getElementById('errorMessage').style.display = 'block';
+        throw error;
+    }
+}
+        async function initialize() {
+            try {
+                document.getElementById('loadingMessage').style.display = 'block';
+                
+                // Primero solo poblamos el selector de estados
+                const estados = Object.keys(estadosMapping).sort();
+                populateSelect('estado', estados);
+                
+                document.getElementById('loadingMessage').style.display = 'none';
+                document.getElementById('filtersContainer').style.display = 'grid';
+                
+                // Los demás filtros se poblarán cuando se seleccione un estado
+            } catch (error) {
+                document.getElementById('loadingMessage').style.display = 'none';
+                console.error('Error en inicialización:', error);
+            }
+        }
+
+        function populateSelect(id, options) {
+            const select = document.getElementById(id);
+            select.innerHTML = '<option value="">Selecciona ' + id.charAt(0).toUpperCase() + id.slice(1) + '</option>';
+            options.forEach(option => {
+                if (option) {
+                    const opt = document.createElement('option');
+                    opt.value = option;
+                    opt.textContent = option;
+                    select.appendChild(opt);
+                }
+            });
+        }
+
+        function checkFiltersAndEnableButtons() {
+    const ciclo = document.getElementById('ciclo').value;
+    const programa = document.getElementById('programa').value;
+    const estado = document.getElementById('estado').value;
+    const municipio = document.getElementById('municipio').value;
+    
+    console.log('Verificando filtros:', { ciclo, programa, estado, municipio }); // Para debug
+    
+    const isValid = ciclo && programa && estado && 
+                   (programa === 'I003-FAIS Entidades' || 
+                    programa === 'I004-FAIS Municipal y de las Demarcaciones Territoriales del Distrito Federal' ||
+                    municipio);
+    
+    document.getElementById('generarAnalisis').disabled = !isValid;
+    document.getElementById('exportarExcel').disabled = !isValid;
+}
+
+const estadosNormalizacion = {
+    'Coahuila': 'Coahuila de Zaragoza',
+    'Michoacán': 'Michoacán de Ocampo',
+    'Veracruz': 'Veracruz de Ignacio de la Llave'
+};
+
+function updateMunicipios() {
+    const estado = document.getElementById('estado').value;
+    const programa = document.getElementById('programa').value;
+    const esCDMX = estado === 'Ciudad de México';
+    
+    console.log('Actualizando municipios/alcaldías para:', estado, programa);
+    console.log('Datos disponibles:', fullData.length);
+    
+    if (!fullData || fullData.length === 0) {
+        console.log('No hay datos disponibles');
+        return;
+    }
+
+    // Agregar logs para debugging
+    console.log('Muestra de datos:', fullData.slice(0, 3));
+    console.log('Programas disponibles:', [...new Set(fullData.map(item => item['PROGRAMA PRESUPUESTARIO']))]);
+
+    const datosFiltrados = fullData.filter(item => item['PROGRAMA PRESUPUESTARIO'] === programa);
+    console.log(`Datos filtrados por programa ${programa}:`, datosFiltrados.length);
+
+    const municipios = [...new Set(datosFiltrados.map(item => {
+        // Asegurarse de obtener el nombre del municipio/alcaldía de cualquiera de los campos posibles
+        return item.NOMBRE_MUNICIPIO || item.MUNICIPIO || item.ALCALDIA || '';
+    }).filter(Boolean))].sort();
+    
+    console.log('Municipios/Alcaldías encontrados:', municipios);
+
+    // Limpiar mensaje de error y resetear selector
+    document.getElementById('errorMessage').style.display = 'none';
+    const municipioSelect = document.getElementById('municipio');
+    
+    // Actualizar el texto del selector según sea Ciudad de México o no
+    const etiquetaSelector = esCDMX ? 'Alcaldía' : 'Municipio';
+    municipioSelect.innerHTML = `<option value="">Selecciona ${etiquetaSelector}</option>`;
+    
+    // Verificar si es programa estatal o municipal
+    if (!programa || programa === 'I003-FAIS Entidades') {
+        municipioSelect.disabled = true;
+        document.getElementById('municipioContainer').style.display = 
+            programa === 'I003-FAIS Entidades' ? 'none' : 'block';
+        return;
+    }
+
+    // Para programas municipales (I004, I005, etc.)
+    if (programa.includes('I004') || programa.includes('I005')) {
+        if (municipios.length > 0) {
+            municipioSelect.disabled = false;
+            document.getElementById('municipioContainer').style.display = 'block';
+            municipios.forEach(municipio => {
+                const opt = document.createElement('option');
+                opt.value = municipio;
+                opt.textContent = municipio;
+                municipioSelect.appendChild(opt);
+            });
+        } else {
+            document.getElementById('errorMessage').textContent = 
+                `No se encontraron ${esCDMX ? 'alcaldías' : 'municipios'} para el programa ${programa}. Por favor, seleccione otro programa.`;
+            document.getElementById('errorMessage').style.display = 'block';
+            municipioSelect.disabled = true;
+        }
+    }
+
+    checkFiltersAndEnableButtons();
+}
+
+function filterData() {
+    const ciclo = document.getElementById('ciclo').value;
+    const programa = document.getElementById('programa').value;
+    const estado = document.getElementById('estado').value;
+    const municipio = document.getElementById('municipio').value;
+    
+    console.log('Aplicando filtros:', { ciclo, programa, estado, municipio });
+    console.log('Total datos antes de filtrar:', fullData.length);
+    
+    filteredData = fullData.filter(item => {
+        const matchCiclo = !ciclo || item['CICLO DEL RECURSO'] === Number(ciclo);
+        const matchPrograma = !programa || item['PROGRAMA PRESUPUESTARIO'] === programa;
+        const matchEstado = !estado || item.NOMBRE_ENTIDAD === estado;  // Corregido
+        const matchMunicipio = !municipio || 
+                              programa === 'I003-FAIS Entidades' || 
+                              item.NOMBRE_MUNICIPIO === municipio;
+        
+        console.log('Match de filtros para item:', {
+            ciclo: matchCiclo,
+            programa: matchPrograma,
+            estado: matchEstado,
+            municipio: matchMunicipio,
+            item: {
+                ciclo: item['CICLO DEL RECURSO'],
+                programa: item['PROGRAMA PRESUPUESTARIO'],
+                estado: item.NOMBRE_ENTIDAD,
+                municipio: item.NOMBRE_MUNICIPIO
+            }
+        });
+
+        return matchCiclo && matchPrograma && matchEstado && matchMunicipio;
+    });
+    
+    console.log('Datos filtrados:', filteredData.length);
+    if (filteredData.length > 0) {
+        console.log('Ejemplo de registro filtrado:', filteredData[0]);
+        console.log('Muestra de registros filtrados:', filteredData.slice(0, 3));
+    }
+    
+    checkFiltersAndEnableButtons();
+}
+
+        function analizarFinanciero(data) {
+            const totalAprobado = data.reduce((sum, item) => sum + (parseFloat(item.APROBADO) || 0), 0);
+            const totalEjercido = data.reduce((sum, item) => sum + (parseFloat(item.EJERCIDO) || 0), 0);
+            const totalPagado = data.reduce((sum, item) => sum + (parseFloat(item.PAGADO) || 0), 0);
+            
+            return {
+                totalAprobado,
+                totalEjercido,
+                totalPagado,
+                porcentajeEjercido: totalAprobado > 0 ? ((totalEjercido / totalAprobado) * 100).toFixed(2) : "0.00",
+                porcentajePagado: totalAprobado > 0 ? ((totalPagado / totalAprobado) * 100).toFixed(2) : "0.00"
+            };
+        }
+
+        function analizarFisico(data) {
+            const resumen = {
+                totalProyectos: data.length,
+                promedioAvance: data.length > 0 ? 
+                    (data.reduce((sum, item) => sum + (parseFloat(item.PORCENTAJE) || 0), 0) / data.length).toFixed(2) : 
+                    "0.00",
+                proyectosPorEstatus: data.reduce((acc, item) => {
+                    const estatus = item.ESTATUS || 'NO ESPECIFICADO';
+                    acc[estatus] = (acc[estatus] || 0) + 1;
+                    return acc;
+                }, {})
+            };
+            
+            resumen.proyectosTerminados = resumen.proyectosPorEstatus['TERMINADO'] || 0;
+            resumen.porcentajeTerminados = resumen.totalProyectos > 0 ? 
+                ((resumen.proyectosTerminados / resumen.totalProyectos) * 100).toFixed(2) : 
+                "0.00";
+            
+            return resumen;
+        }
+
+        function analizarInversion(data) {
+            const analisis = {
+                porCategoria: {},
+                porTipoPrograma: {},
+                porClasificacion: {}
+            };
+        
+            data.forEach(item => {
+                const monto = parseFloat(item.APROBADO) || 0;
+                const categoria = item.CATEGORIA || 'NO ESPECIFICADA';
+                const tipoPrograma = item.TIPO_PROGRAMA_PROYECTO || 'NO ESPECIFICADO';
+                const clasificacion = item.CLASIFICACION || 'NO ESPECIFICADA';
+                
+                analisis.porCategoria[categoria] = (analisis.porCategoria[categoria] || 0) + monto;
+                analisis.porTipoPrograma[tipoPrograma] = (analisis.porTipoPrograma[tipoPrograma] || 0) + monto;
+                analisis.porClasificacion[clasificacion] = (analisis.porClasificacion[clasificacion] || 0) + monto;
+            });
+        
+            return analisis;
+        }
+
+        function analizarEjecucion(data) {
+            return {
+                totalEjecutoras: new Set(data.map(item => item.INSTITUCION_EJECUTORA)).size,
+                totalContratistas: new Set(data.map(item => item.CONTRATISTA)).size,
+                totalConvocantes: new Set(data.map(item => item.CONVOCANTE)).size
+            };
+        }
+
+        function analizarCobertura(data, esEstatal) {
+    const estado = document.getElementById('estado').value;
+    const esCDMX = estado === 'Ciudad de México';
+    const terminoGeografico = esCDMX ? 'alcaldías' : 'municipios';
+    
+    const resultado = {
+        totalLocalidades: new Set(data.map(item => item.LOCALIDAD)).size,
+        distribucionGeografica: esEstatal ? 
+            `${new Set(data.map(item => item.NOMBRE_MUNICIPIO)).size} ${terminoGeografico}` :
+            `${new Set(data.map(item => item.LOCALIDAD)).size} localidades`,
+        concentracionInversion: data.reduce((acc, item) => {
+            const key = esEstatal ? item.NOMBRE_MUNICIPIO : item.LOCALIDAD;
+            acc[key] = (acc[key] || 0) + (Number(item.APROBADO) || 0);
+            return acc;
+        }, {})
+    };
+    
+    const totalInversion = Object.values(resultado.concentracionInversion).reduce((a, b) => a + b, 0);
+    const maxInversion = Math.max(...Object.values(resultado.concentracionInversion), 0);
+    resultado.porcentajeConcentracion = totalInversion > 0 ? 
+        ((maxInversion / totalInversion) * 100).toFixed(2) : "0.00";
+    
+    return resultado;
+}
+
+
+        function analizarBeneficiarios(data) {
+            const totalMujeres = data.reduce((sum, item) => sum + (parseFloat(item.MUJERES) || 0), 0);
+            const totalHombres = data.reduce((sum, item) => sum + (parseFloat(item.HOMBRES) || 0), 0);
+            const total = totalMujeres + totalHombres;
+        
+            return {
+                totalMujeres,
+                totalHombres,
+                ratioMujeres: total > 0 ? ((totalMujeres / total) * 100).toFixed(2) : "0.00"
+            };
+        }
+
+        function analizarTemporal(data) {
+            const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                           'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            
+            const iniciosPorMes = Array(12).fill(0);
+            const terminosPorMes = Array(12).fill(0);
+            let tiempoTotal = 0;
+            let proyectosValidos = 0;
+        
+            data.forEach(item => {
+                if (item.FECHA_INICIO && item.FECHA_TERMINO) {
+                    const inicio = new Date(item.FECHA_INICIO);
+                    const termino = new Date(item.FECHA_TERMINO);
+                    
+                    if (!isNaN(inicio.getTime()) && !isNaN(termino.getTime())) {
+                        const mesInicio = inicio.getMonth();
+                        const mesTermino = termino.getMonth();
+                        
+                        iniciosPorMes[mesInicio]++;
+                        terminosPorMes[mesTermino]++;
+                        
+                        // Cálculo de meses entre fechas
+                        const diferenciaMeses =
