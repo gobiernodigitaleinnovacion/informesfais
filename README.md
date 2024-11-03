@@ -2,21 +2,29 @@
 
 Sistema web para el análisis del Fondo de Aportaciones para la Infraestructura Social (FAIS).
 
-## Configuración de GitHub Pages
+## Configuración de GitHub Pages (Paso a Paso)
 
-Para activar GitHub Pages y hacer el sitio accesible:
+1. Ve a tu repositorio en GitHub: https://github.com/gobiernodigitaleinnovacion/informesfais
 
-1. Ve a la página del repositorio en GitHub
-2. Haz clic en "Settings" (Configuración)
-3. En el menú lateral izquierdo, haz clic en "Pages"
-4. En la sección "Source":
-   - Selecciona la rama "master"
+2. En la parte superior del repositorio, verás varias pestañas (Code, Issues, Pull requests, etc.). 
+   Haz clic en "Settings" (tiene un ícono de engranaje ⚙️)
+
+3. En el menú del lado izquierdo, busca y haz clic en "Pages" 
+   (está en la sección "Code and automation")
+
+4. En la página de GitHub Pages, verás una sección llamada "Build and deployment"
+
+5. Dentro de esta sección, busca "Source". Aquí necesitas:
+   - Hacer clic en el botón que dice "Deploy from a branch"
+   - En el selector de rama (Branch), elige "master"
    - En el selector de carpeta, elige "/docs"
-   - Haz clic en "Save"
-5. Espera unos minutos mientras GitHub Pages construye y despliega tu sitio
+   - Haz clic en el botón "Save"
 
-Una vez configurado, el sitio estará disponible en:
-https://gobiernodigitaleinnovacion.github.io/informesfais/
+6. Espera unos minutos mientras GitHub construye tu sitio
+   (verás un mensaje que dice "Your site is being built")
+
+7. Cuando esté listo, verás un mensaje con la URL de tu sitio:
+   https://gobiernodigitaleinnovacion.github.io/informesfais/
 
 ## Características
 
@@ -24,13 +32,6 @@ https://gobiernodigitaleinnovacion.github.io/informesfais/
 - Generación de análisis estadísticos
 - Visualización de datos en tablas
 - Exportación de datos a CSV
-
-## Tecnologías
-
-- HTML5
-- CSS3
-- JavaScript (ES6+)
-- GitHub Pages para el despliegue
 
 ## Uso
 
