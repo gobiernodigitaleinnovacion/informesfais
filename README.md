@@ -2,62 +2,57 @@
 
 Sistema web para el análisis del Fondo de Aportaciones para la Infraestructura Social (FAIS).
 
-## Configuración de GitHub Pages (Paso a Paso)
+## Habilitar GitHub Pages (Paso a Paso con Capturas)
 
 1. Ve a tu repositorio en GitHub: https://github.com/gobiernodigitaleinnovacion/informesfais
 
-2. En la parte superior del repositorio, verás varias pestañas (Code, Issues, Pull requests, etc.). 
-   Haz clic en "Settings" (tiene un ícono de engranaje ⚙️)
+2. Haz clic en "Settings" (⚙️) en la barra superior del repositorio
 
-3. En el menú del lado izquierdo, busca y haz clic en "Pages" 
-   (está en la sección "Code and automation")
+3. En el menú izquierdo, busca y haz clic en "Pages" bajo "Code and automation"
 
-4. En la página de GitHub Pages, verás una sección llamada "Build and deployment"
+4. Verás un mensaje que dice "GitHub Pages is currently disabled"
 
-5. Dentro de esta sección, busca "Source". Aquí necesitas:
-   - Hacer clic en el botón que dice "Deploy from a branch"
-   - En el selector de rama (Branch), elige "master"
-   - En el selector de carpeta, elige "/docs"
-   - Haz clic en el botón "Save"
+5. En la sección "Build and deployment":
+   - Bajo "Source", verás un mensaje que dice "Select a source below to enable GitHub Pages for this repository"
+   - Haz clic en el botón desplegable que dice "None" o "Select Branch"
+   - Selecciona la rama "master"
+   - En el siguiente selector, elige "/docs"
+   - Haz clic en "Save"
 
-6. Espera unos minutos mientras GitHub construye tu sitio
-   (verás un mensaje que dice "Your site is being built")
+6. La página se recargará y verás un mensaje que dice:
+   "Your site is being built" o "Your site is published at [URL]"
 
-7. Cuando esté listo, verás un mensaje con la URL de tu sitio:
+7. Espera unos minutos y tu sitio estará disponible en:
    https://gobiernodigitaleinnovacion.github.io/informesfais/
 
-## Características
+## Verificar la Publicación
 
-- Selección de estado, año y programa
-- Generación de análisis estadísticos
-- Visualización de datos en tablas
-- Exportación de datos a CSV
+1. Después de guardar la configuración, espera 2-3 minutos
+2. Refresca la página de configuración de GitHub Pages
+3. Deberías ver un mensaje en verde que dice:
+   "Your site is published at https://gobiernodigitaleinnovacion.github.io/informesfais/"
+4. Haz clic en el enlace para ver tu sitio publicado
 
-## Uso
+## Solución de Problemas
 
-1. Selecciona un estado de la lista desplegable
-2. Elige el año de análisis
-3. Selecciona el programa (FISE o FISMDF)
-4. Haz clic en "Generar Análisis" para ver los resultados
-5. Utiliza el botón "Exportar Datos" para descargar los datos en formato CSV
+Si no ves tu sitio después de unos minutos:
+1. Verifica que la rama "master" existe y contiene los archivos
+2. Asegúrate que los archivos están en la carpeta "docs"
+3. Refresca la página de configuración de GitHub Pages
+4. Espera unos minutos más, a veces GitHub tarda en publicar los cambios
 
-## Instalación Local
+## Uso del Sitio
 
-1. Clonar el repositorio:
-   ```bash
-   git clone https://github.com/gobiernodigitaleinnovacion/informesfais.git
-   ```
-
-2. Navegar al directorio del proyecto:
-   ```bash
-   cd informesfais
-   ```
-
-3. Abrir `docs/index.html` en tu navegador web preferido
+Una vez publicado, podrás:
+1. Seleccionar estado de la lista desplegable
+2. Elegir año de análisis
+3. Seleccionar programa (FISE o FISMDF)
+4. Generar análisis y ver resultados
+5. Exportar datos según necesites
 
 ## Contacto
 
-Para más información o soporte:
+Para soporte técnico:
 - Email: juanheriberto.rosas@gobiernodigitaleinnovacion.com
 - Web: www.gobiernodigitaleinnovacion.com
 
