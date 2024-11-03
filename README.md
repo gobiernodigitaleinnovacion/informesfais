@@ -2,9 +2,21 @@
 
 Sistema web para el análisis del Fondo de Aportaciones para la Infraestructura Social (FAIS).
 
-## Descripción
+## Configuración de GitHub Pages
 
-Esta aplicación web permite analizar datos del FAIS por estado, año y programa, generando visualizaciones y análisis estadísticos básicos.
+Para activar GitHub Pages y hacer el sitio accesible:
+
+1. Ve a la página del repositorio en GitHub
+2. Haz clic en "Settings" (Configuración)
+3. En el menú lateral izquierdo, haz clic en "Pages"
+4. En la sección "Source":
+   - Selecciona la rama "master"
+   - En el selector de carpeta, elige "/docs"
+   - Haz clic en "Save"
+5. Espera unos minutos mientras GitHub Pages construye y despliega tu sitio
+
+Una vez configurado, el sitio estará disponible en:
+https://gobiernodigitaleinnovacion.github.io/informesfais/
 
 ## Características
 
@@ -19,10 +31,6 @@ Esta aplicación web permite analizar datos del FAIS por estado, año y programa
 - CSS3
 - JavaScript (ES6+)
 - GitHub Pages para el despliegue
-
-## Acceso a la Aplicación
-
-La aplicación está disponible en: https://gobiernodigitaleinnovacion.github.io/informesfais/
 
 ## Uso
 
@@ -44,22 +52,14 @@ La aplicación está disponible en: https://gobiernodigitaleinnovacion.github.io
    cd informesfais
    ```
 
-3. Abrir `src/index.html` en tu navegador web preferido
-
-## Contribuir
-
-1. Haz fork del repositorio
-2. Crea una rama para tu función: `git checkout -b feature/nueva-funcion`
-3. Haz commit de tus cambios: `git commit -am 'Agrega nueva función'`
-4. Haz push a la rama: `git push origin feature/nueva-funcion`
-5. Envía un pull request
-
-## Licencia
-
-Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para más detalles.
+3. Abrir `docs/index.html` en tu navegador web preferido
 
 ## Contacto
 
 Para más información o soporte:
 - Email: juanheriberto.rosas@gobiernodigitaleinnovacion.com
 - Web: www.gobiernodigitaleinnovacion.com
+
+## Licencia
+
+Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para más detalles.
