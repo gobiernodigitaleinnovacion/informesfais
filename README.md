@@ -24,12 +24,12 @@ Esta aplicación web permite analizar datos del FAIS por estado, año y programa
 
 1. Clonar el repositorio:
    ```bash
-   git clone https://github.com/[tu-usuario]/fais-analysis
+   git clone https://github.com/[tu-usuario]/analisis-fais
    ```
 
 2. Navegar al directorio del proyecto:
    ```bash
-   cd fais-analysis
+   cd analisis-fais
    ```
 
 3. Abrir `src/index.html` en tu navegador web preferido
@@ -42,7 +42,7 @@ Esta aplicación web permite analizar datos del FAIS por estado, año y programa
 4. En la carpeta, selecciona "src"
 5. Guarda los cambios
 
-La aplicación estará disponible en: https://[tu-usuario].github.io/fais-analysis/
+La aplicación estará disponible en: https://[tu-usuario].github.io/analisis-fais/
 
 ## Uso
 

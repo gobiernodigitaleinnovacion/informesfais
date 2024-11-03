@@ -1,62 +1,62 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const stateSelect = document.getElementById('stateSelect');
-    const yearSelect = document.getElementById('yearSelect');
-    const programSelect = document.getElementById('programSelect');
-    const analyzeBtn = document.getElementById('analyzeBtn');
-    const exportBtn = document.getElementById('exportBtn');
-    const chartElement = document.getElementById('chart');
-    const tableElement = document.getElementById('table');
+    const selectorEstado = document.getElementById('stateSelect');
+    const selectorAño = document.getElementById('yearSelect');
+    const selectorPrograma = document.getElementById('programSelect');
+    const botonAnalizar = document.getElementById('analyzeBtn');
+    const botonExportar = document.getElementById('exportBtn');
+    const elementoGrafica = document.getElementById('chart');
+    const elementoTabla = document.getElementById('table');
 
-    let currentData = null;
+    let datosActuales = null;
 
-    // Populate selects
-    CONFIG.STATES.forEach(state => {
-        const option = document.createElement('option');
-        option.value = state;
-        option.textContent = state;
-        stateSelect.appendChild(option);
+    // Poblar selectores
+    CONFIG.ESTADOS.forEach(estado => {
+        const opcion = document.createElement('option');
+        opcion.value = estado;
+        opcion.textContent = estado;
+        selectorEstado.appendChild(opcion);
     });
 
-    CONFIG.YEARS.forEach(year => {
-        const option = document.createElement('option');
-        option.value = year;
-        option.textContent = year;
-        yearSelect.appendChild(option);
+    CONFIG.AÑOS.forEach(año => {
+        const opcion = document.createElement('option');
+        opcion.value = año;
+        opcion.textContent = año;
+        selectorAño.appendChild(opcion);
     });
 
-    CONFIG.PROGRAMS.forEach(program => {
-        const option = document.createElement('option');
-        option.value = program;
-        option.textContent = program;
-        programSelect.appendChild(option);
+    CONFIG.PROGRAMAS.forEach(programa => {
+        const opcion = document.createElement('option');
+        opcion.value = programa;
+        opcion.textContent = programa;
+        selectorPrograma.appendChild(opcion);
     });
 
     // Event listeners
-    analyzeBtn.addEventListener('click', async () => {
-        const state = stateSelect.value;
-        const year = yearSelect.value;
-        const program = programSelect.value;
+    botonAnalizar.addEventListener('click', async () => {
+        const estado = selectorEstado.value;
+        const año = selectorAño.value;
+        const programa = selectorPrograma.value;
 
-        if (!state || !year || !program) {
+        if (!estado || !año || !programa) {
             alert('Por favor seleccione todos los campos');
             return;
         }
 
         try {
-            currentData = await DataService.fetchStateData(state, year, program);
-            const analysis = await AnalysisService.generateAnalysis(currentData);
-            AnalysisService.displayResults(analysis, chartElement, tableElement);
+            datosActuales = await ServicioDatos.obtenerDatosEstado(estado, año, programa);
+            const analisis = await ServicioAnalisis.generarAnalisis(datosActuales);
+            ServicioAnalisis.mostrarResultados(analisis, elementoGrafica, elementoTabla);
         } catch (error) {
             console.error('Error:', error);
             alert('Error al generar el análisis');
         }
     });
 
-    exportBtn.addEventListener('click', () => {
-        if (!currentData) {
+    botonExportar.addEventListener('click', () => {
+        if (!datosActuales) {
             alert('Primero debe generar un análisis');
             return;
         }
-        DataService.exportToCSV(currentData);
+        ServicioDatos.exportarACSV(datosActuales);
     });
 });

@@ -1,23 +1,23 @@
-class AnalysisService {
-    static async generateAnalysis(data) {
-        // Simulate analysis calculations
-        const total = data.data.reduce((acc, curr) => acc + curr.value, 0);
-        const average = total / data.data.length;
+class ServicioAnalisis {
+    static async generarAnalisis(datos) {
+        // Simulación de cálculos de análisis
+        const total = datos.datos.reduce((acc, curr) => acc + curr.valor, 0);
+        const promedio = total / datos.datos.length;
         
         return {
             total: total.toFixed(2),
-            average: average.toFixed(2),
-            trend: average > 500 ? 'Positivo' : 'Negativo'
+            promedio: promedio.toFixed(2),
+            tendencia: promedio > 500 ? 'Positiva' : 'Negativa'
         };
     }
 
-    static displayResults(analysisData, chartElement, tableElement) {
-        // Clear previous results
-        chartElement.innerHTML = '';
-        tableElement.innerHTML = '';
+    static mostrarResultados(datosAnalisis, elementoGrafica, elementoTabla) {
+        // Limpiar resultados anteriores
+        elementoGrafica.innerHTML = '';
+        elementoTabla.innerHTML = '';
 
-        // Display analysis results in table
-        tableElement.innerHTML = `
+        // Mostrar resultados del análisis en tabla
+        elementoTabla.innerHTML = `
             <table border="1">
                 <tr>
                     <th>Métrica</th>
@@ -25,15 +25,15 @@ class AnalysisService {
                 </tr>
                 <tr>
                     <td>Total</td>
-                    <td>${analysisData.total}</td>
+                    <td>${datosAnalisis.total}</td>
                 </tr>
                 <tr>
                     <td>Promedio</td>
-                    <td>${analysisData.average}</td>
+                    <td>${datosAnalisis.promedio}</td>
                 </tr>
                 <tr>
                     <td>Tendencia</td>
-                    <td>${analysisData.trend}</td>
+                    <td>${datosAnalisis.tendencia}</td>
                 </tr>
             </table>
         `;
