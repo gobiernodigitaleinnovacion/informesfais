@@ -1,8 +1,6 @@
 let fullData = [];
 let filteredData = [];
 
-// En dataManager.js, modifica la función fetchExcelData
-
 async function fetchExcelData(estado) {
     try {
         const fileName = estadosMapping[estado];
@@ -10,12 +8,16 @@ async function fetchExcelData(estado) {
             throw new Error(`Archivo no encontrado para el estado: ${estado}`);
         }
 
+        // Usar proxy cors-anywhere de Heroku
         const blobUrl = `${baseUrl}${fileName}?${sasToken}`;
+        const proxyUrl = `https://cors-anywhere.herokuapp.com/${blobUrl}`;
         
-        // Usar el proxy de allorigins.win en lugar de cors-anywhere
-        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(blobUrl)}`;
-        
-        const response = await fetch(proxyUrl);
+        const response = await fetch(proxyUrl, {
+            method: 'GET',
+            headers: {
+                'Origin': 'https://gobiernodigitaleinnovacion.github.io'
+            }
+        });
 
         if (!response.ok) {
             throw new Error(`Error HTTP: ${response.status} - ${response.statusText}`);
