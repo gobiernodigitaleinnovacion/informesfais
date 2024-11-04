@@ -150,83 +150,90 @@ function analizarTemporal(data) {
         mesMasTerminos: meses[mesMaxTerminos]
     };
 }
+
 async function generarInforme(data, programa) {
-    // Inicialización de jsPDF
-    const doc = new window.jsPDF();
-    
-    // Obtener datos de análisis
-    const estado = document.getElementById('estado').value;
-    const ciclo = document.getElementById('ciclo').value;
-    const municipio = document.getElementById('municipio').value;
-    const esEstatal = programa === 'I003-FAIS Entidades';
-    const esCDMX = estado === 'Ciudad de México';
-    
-    // Realizar todos los análisis
-    const analisis = {
-        financiero: analizarFinanciero(data),
-        fisico: analizarFisico(data),
-        inversion: analizarInversion(data),
-        ejecucion: analizarEjecucion(data),
-        cobertura: analizarCobertura(data, esEstatal),
-        beneficiarios: analizarBeneficiarios(data),
-        temporal: analizarTemporal(data)
-    };
+    try {
+        const doc = new window.jsPDF();
+        if (!doc) {
+            throw new Error('No se pudo inicializar jsPDF');
+        }
+        
+        const estado = document.getElementById('estado').value;
+        const ciclo = document.getElementById('ciclo').value;
+        const municipio = document.getElementById('municipio').value;
+        const esEstatal = programa === 'I003-FAIS Entidades';
+        const esCDMX = estado === 'Ciudad de México';
+        
+        const analisis = {
+            financiero: analizarFinanciero(data),
+            fisico: analizarFisico(data),
+            inversion: analizarInversion(data),
+            ejecucion: analizarEjecucion(data),
+            cobertura: analizarCobertura(data, esEstatal),
+            beneficiarios: analizarBeneficiarios(data),
+            temporal: analizarTemporal(data)
+        };
 
-    // Configuración de estilos
-    doc.setFont("helvetica");
-    
-    // Título
-    doc.setFontSize(16);
-    doc.text(`Análisis FAIS - ${estado}`, 105, 20, { align: 'center' });
-    doc.setFontSize(12);
-    doc.text(`Ciclo: ${ciclo} | Programa: ${programa}`, 105, 30, { align: 'center' });
-    if (municipio) {
-        doc.text(`${esCDMX ? 'Alcaldía' : 'Municipio'}: ${municipio}`, 105, 40, { align: 'center' });
+        doc.setFont("helvetica");
+        
+        // Título
+        doc.setFontSize(16);
+        doc.text(`Análisis FAIS - ${estado}`, 105, 20, { align: 'center' });
+        doc.setFontSize(12);
+        doc.text(`Ciclo: ${ciclo} | Programa: ${programa}`, 105, 30, { align: 'center' });
+        if (municipio) {
+            doc.text(`${esCDMX ? 'Alcaldía' : 'Municipio'}: ${municipio}`, 105, 40, { align: 'center' });
+        }
+
+        // Información financiera
+        let yPos = 50;
+        doc.setFontSize(14);
+        doc.text("Información Financiera", 20, yPos);
+        yPos += 10;
+        doc.setFontSize(10);
+        doc.text(`Total Aprobado: $${formatNumber(analisis.financiero.totalAprobado)}`, 25, yPos);
+        yPos += 7;
+        doc.text(`Total Ejercido: $${formatNumber(analisis.financiero.totalEjercido)}`, 25, yPos);
+        yPos += 7;
+        doc.text(`Total Pagado: $${formatNumber(analisis.financiero.totalPagado)}`, 25, yPos);
+        yPos += 7;
+        doc.text(`Porcentaje Ejercido: ${analisis.financiero.porcentajeEjercido}%`, 25, yPos);
+
+        // Información física
+        yPos += 15;
+        doc.setFontSize(14);
+        doc.text("Información Física", 20, yPos);
+        yPos += 10;
+        doc.setFontSize(10);
+        doc.text(`Total Proyectos: ${analisis.fisico.totalProyectos}`, 25, yPos);
+        yPos += 7;
+        doc.text(`Promedio de Avance: ${analisis.fisico.promedioAvance}%`, 25, yPos);
+        yPos += 7;
+        doc.text(`Proyectos Terminados: ${analisis.fisico.proyectosTerminados}`, 25, yPos);
+
+        // Beneficiarios
+        yPos += 15;
+        doc.setFontSize(14);
+        doc.text("Beneficiarios", 20, yPos);
+        yPos += 10;
+        doc.setFontSize(10);
+        doc.text(`Total Mujeres: ${formatNumber(analisis.beneficiarios.totalMujeres)}`, 25, yPos);
+        yPos += 7;
+        doc.text(`Total Hombres: ${formatNumber(analisis.beneficiarios.totalHombres)}`, 25, yPos);
+        yPos += 7;
+        doc.text(`Ratio Mujeres: ${analisis.beneficiarios.ratioMujeres}%`, 25, yPos);
+
+        // Pie de página
+        doc.setFontSize(8);
+        doc.text("Gobierno Digital e Innovación © 2024", 105, 280, { align: 'center' });
+
+        // Guardar PDF
+        const nombreArchivo = `FAIS_${estado}_${ciclo}${municipio ? '_' + municipio : ''}.pdf`;
+        doc.save(nombreArchivo);
+        
+        return true;
+    } catch (error) {
+        console.error('Error al generar el PDF:', error);
+        throw new Error('No se pudo generar el PDF: ' + error.message);
     }
-
-    // Información financiera
-    let yPos = 50;
-    doc.setFontSize(14);
-    doc.text("Información Financiera", 20, yPos);
-    yPos += 10;
-    doc.setFontSize(10);
-    doc.text(`Total Aprobado: $${formatNumber(analisis.financiero.totalAprobado)}`, 25, yPos);
-    yPos += 7;
-    doc.text(`Total Ejercido: $${formatNumber(analisis.financiero.totalEjercido)}`, 25, yPos);
-    yPos += 7;
-    doc.text(`Total Pagado: $${formatNumber(analisis.financiero.totalPagado)}`, 25, yPos);
-    yPos += 7;
-    doc.text(`Porcentaje Ejercido: ${analisis.financiero.porcentajeEjercido}%`, 25, yPos);
-
-    // Información física
-    yPos += 15;
-    doc.setFontSize(14);
-    doc.text("Información Física", 20, yPos);
-    yPos += 10;
-    doc.setFontSize(10);
-    doc.text(`Total Proyectos: ${analisis.fisico.totalProyectos}`, 25, yPos);
-    yPos += 7;
-    doc.text(`Promedio de Avance: ${analisis.fisico.promedioAvance}%`, 25, yPos);
-    yPos += 7;
-    doc.text(`Proyectos Terminados: ${analisis.fisico.proyectosTerminados}`, 25, yPos);
-
-    // Beneficiarios
-    yPos += 15;
-    doc.setFontSize(14);
-    doc.text("Beneficiarios", 20, yPos);
-    yPos += 10;
-    doc.setFontSize(10);
-    doc.text(`Total Mujeres: ${formatNumber(analisis.beneficiarios.totalMujeres)}`, 25, yPos);
-    yPos += 7;
-    doc.text(`Total Hombres: ${formatNumber(analisis.beneficiarios.totalHombres)}`, 25, yPos);
-    yPos += 7;
-    doc.text(`Ratio Mujeres: ${analisis.beneficiarios.ratioMujeres}%`, 25, yPos);
-
-    // Pie de página
-    doc.setFontSize(8);
-    doc.text("Gobierno Digital e Innovación © 2024", 105, 280, { align: 'center' });
-
-    // Guardar PDF
-    const nombreArchivo = `FAIS_${estado}_${ciclo}${municipio ? '_' + municipio : ''}.pdf`;
-    doc.save(nombreArchivo);
 }

@@ -9,8 +9,14 @@ const CONFIG = {
 const baseUrl = 'https://stindicadores.blob.core.windows.net/estados-fais/';
 const sasToken = 'sp=r&st=2024-10-30T21:15:16Z&se=2026-10-31T05:15:16Z&spr=https&sv=2022-11-02&sr=c&sig=okiG4MWLVsgE37DUov5YBZcbXqjYOd%2BKcOnNh0TYN2s%3D';
 
-// Agregar configuración de CORS
-const corsProxyUrl = 'https://corsproxy.io/?';
+// Configuración de CORS y proxy
+const corsConfig = {
+    mode: 'cors',
+    headers: {
+        'Origin': 'https://gobiernodigitaleinnovacion.github.io',
+        'Access-Control-Allow-Origin': '*'
+    }
+};
 
 // Mapeo de estados a archivos
 const estadosMapping = {

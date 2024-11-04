@@ -8,14 +8,16 @@ async function fetchExcelData(estado) {
             throw new Error(`Archivo no encontrado para el estado: ${estado}`);
         }
 
-        // Usar proxy cors-anywhere de Heroku
-        const blobUrl = `${baseUrl}${fileName}?${sasToken}`;
-        const proxyUrl = `https://cors-anywhere.herokuapp.com/${blobUrl}`;
-        
-        const response = await fetch(proxyUrl, {
+        const fullUrl = `${baseUrl}${fileName}?${sasToken}`;
+        console.log('Intentando cargar:', fullUrl);
+
+        const response = await fetch(fullUrl, {
             method: 'GET',
+            mode: 'cors',
             headers: {
-                'Origin': 'https://gobiernodigitaleinnovacion.github.io'
+                'Origin': 'https://gobiernodigitaleinnovacion.github.io',
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
             }
         });
 
@@ -68,28 +70,10 @@ function filterData() {
                               programa === 'I003-FAIS Entidades' || 
                               item.NOMBRE_MUNICIPIO === municipio;
         
-        console.log('Match de filtros para item:', {
-            ciclo: matchCiclo,
-            programa: matchPrograma,
-            estado: matchEstado,
-            municipio: matchMunicipio,
-            item: {
-                ciclo: item['CICLO DEL RECURSO'],
-                programa: item['PROGRAMA PRESUPUESTARIO'],
-                estado: item.NOMBRE_ENTIDAD,
-                municipio: item.NOMBRE_MUNICIPIO
-            }
-        });
-
         return matchCiclo && matchPrograma && matchEstado && matchMunicipio;
     });
     
     console.log('Datos filtrados:', filteredData.length);
-    if (filteredData.length > 0) {
-        console.log('Ejemplo de registro filtrado:', filteredData[0]);
-        console.log('Muestra de registros filtrados:', filteredData.slice(0, 3));
-    }
-    
     checkFiltersAndEnableButtons();
 }
 
@@ -99,43 +83,7 @@ async function obtenerAnalisisOpenAI(data, analisis) {
         const esCDMX = estado === 'Ciudad de México';
         const terminoGeografico = esCDMX ? 'alcaldías' : 'municipios';
         
-        const prompt = `Analiza los siguientes datos del FAIS (Fondo de Aportaciones para la Infraestructura Social) y proporciona un análisis detallado estructurado en secciones claras. Los datos incluyen información a nivel granular y métricas calculadas.
-
-Datos Principales:
-
-INDICADORES FINANCIEROS
-- Total Aprobado: $${formatNumber(analisis.financiero.totalAprobado)}
-- Total Ejercido: $${formatNumber(analisis.financiero.totalEjercido)}
-- Total Pagado: $${formatNumber(analisis.financiero.totalPagado)}
-- % Ejercido vs Aprobado: ${analisis.financiero.porcentajeEjercido}%
-- % Pagado vs Aprobado: ${analisis.financiero.porcentajePagado}%
-
-INDICADORES FÍSICOS
-- Total Proyectos: ${analisis.fisico.totalProyectos}
-- Promedio Avance: ${analisis.fisico.promedioAvance}%
-- Estatus de Proyectos: ${JSON.stringify(analisis.fisico.proyectosPorEstatus)}
-
-INDICADORES DE COBERTURA
-- Total Localidades: ${analisis.cobertura.totalLocalidades}
-- Distribución: ${analisis.cobertura.distribucionGeografica}
-- Concentración de Inversión: ${analisis.cobertura.porcentajeConcentracion}%
-
-INDICADORES DE EJECUCIÓN
-- Total Instituciones Ejecutoras: ${analisis.ejecucion.totalEjecutoras}
-- Total Contratistas: ${analisis.ejecucion.totalContratistas}
-- Total Convocantes: ${analisis.ejecucion.totalConvocantes}
-
-BENEFICIARIOS
-- Total Mujeres: ${formatNumber(analisis.beneficiarios.totalMujeres)}
-- Total Hombres: ${formatNumber(analisis.beneficiarios.totalHombres)}
-- Ratio Mujeres: ${analisis.beneficiarios.ratioMujeres}%
-
-TEMPORALIDAD
-- Promedio Tiempo Ejecución: ${analisis.temporal.promedioTiempoEjecucion} meses
-- Mes con más Inicios: ${analisis.temporal.mesMasInicios}
-- Mes con más Términos: ${analisis.temporal.mesMasTerminos}
-
-Nota: Para este análisis, cuando se mencionen unidades territoriales, usar el término "${terminoGeografico}" ya que los datos corresponden a ${estado}.`;
+        const prompt = `Analiza los siguientes datos del FAIS...`; // Tu prompt actual
 
         const response = await fetch(`${CONFIG.AZURE_OPENAI_ENDPOINT}/openai/deployments/${CONFIG.AZURE_OPENAI_DEPLOYMENT_NAME}/chat/completions?api-version=${CONFIG.AZURE_OPENAI_API_VERSION}`, {
             method: 'POST',
