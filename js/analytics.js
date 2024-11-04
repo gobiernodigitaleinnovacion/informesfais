@@ -5,7 +5,6 @@ import { showError } from './ui.js';
 window.jsPDF = window.jspdf.jsPDF;
 
 export class AnalyticsManager {
-    // Formateo de números
     static formatNumber(number) {
         return new Intl.NumberFormat('es-MX', {
             minimumFractionDigits: 2,
@@ -13,7 +12,6 @@ export class AnalyticsManager {
         }).format(number);
     }
 
-    // Análisis Financiero
     static analizarFinanciero(data) {
         const totales = data.reduce((acc, item) => {
             acc.aprobado += Number(item.APROBADO) || 0;
@@ -31,7 +29,6 @@ export class AnalyticsManager {
         };
     }
 
-    // Análisis Físico
     static analizarFisico(data) {
         const totalProyectos = data.length;
         const sumaAvances = data.reduce((sum, item) => sum + (Number(item.PORCENTAJE) || 0), 0);
@@ -46,7 +43,6 @@ export class AnalyticsManager {
         };
     }
 
-    // Análisis de Inversión
     static analizarInversion(data) {
         return {
             porCategoria: this.agruparPorPropiedad(data, 'CATEGORIA', 'APROBADO'),
@@ -55,7 +51,6 @@ export class AnalyticsManager {
         };
     }
 
-    // Análisis de Ejecución
     static analizarEjecucion(data) {
         return {
             totalEjecutoras: this.contarUnicos(data, 'INSTITUCION_EJECUTORA'),
@@ -64,7 +59,6 @@ export class AnalyticsManager {
         };
     }
 
-    // Análisis de Cobertura
     static analizarCobertura(data, estado, esEstatal) {
         const esCDMX = estado === 'Ciudad de México';
         const terminoGeografico = esCDMX ? 'alcaldías' : 'municipios';
@@ -87,7 +81,6 @@ export class AnalyticsManager {
         };
     }
 
-    // Análisis de Beneficiarios
     static analizarBeneficiarios(data) {
         const totales = data.reduce((acc, item) => {
             acc.mujeres += Number(item.MUJERES) || 0;
@@ -104,7 +97,6 @@ export class AnalyticsManager {
         };
     }
 
-    // Análisis Temporal
     static analizarTemporal(data) {
         const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
                       'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -119,7 +111,6 @@ export class AnalyticsManager {
         };
     }
 
-    // Generación de Informe PDF
     static async generarInforme(data, filtros) {
         try {
             const doc = new window.jsPDF();
@@ -138,7 +129,6 @@ export class AnalyticsManager {
         }
     }
 
-    // Métodos auxiliares privados
     static calcularPorcentaje(valor, total) {
         return total > 0 ? ((valor / total) * 100).toFixed(2) : "0.00";
     }
@@ -241,254 +231,240 @@ export class AnalyticsManager {
         return `FAIS_${estado.replace(/\s+/g, '_')}_${ciclo}${municipio ? '_' + municipio.replace(/\s+/g, '_') : ''}.pdf`;
     }
 
+    static async generarPDF(doc, analisis, filtros) {
+        try {
+            const { estado, ciclo, programa, municipio } = filtros;
+            const esCDMX = estado === 'Ciudad de México';
+            const terminoGeografico = esCDMX ? 'Alcaldía' : 'Municipio';
 
-static async generarPDF(doc, analisis, filtros) {
-    try {
-        const { estado, ciclo, programa, municipio } = filtros;
-        const esCDMX = estado === 'Ciudad de México';
-        const terminoGeografico = esCDMX ? 'Alcaldía' : 'Municipio';
+            doc.setFont("helvetica");
+            let yPos = 20;
 
-        // Configuración inicial del documento
-        doc.setFont("helvetica");
-        let yPos = 20;
+            this.agregarEncabezado(doc, {
+                estado,
+                ciclo,
+                programa,
+                municipio,
+                terminoGeografico,
+                yPos
+            });
+            yPos = 50;
 
-        // Título y encabezado
-        this.agregarEncabezado(doc, {
-            estado,
-            ciclo,
-            programa,
-            municipio,
-            terminoGeografico,
-            yPos
-        });
-        yPos = 50;
+            yPos = this.agregarSeccionFinanciera(doc, analisis.financiero, yPos);
+            yPos += 10;
 
-        // Sección Financiera
-        yPos = this.agregarSeccionFinanciera(doc, analisis.financiero, yPos);
-        yPos += 10;
+            yPos = this.agregarSeccionFisica(doc, analisis.fisico, yPos);
+            yPos += 10;
 
-        // Sección Física
-        yPos = this.agregarSeccionFisica(doc, analisis.fisico, yPos);
-        yPos += 10;
+            yPos = this.agregarSeccionCobertura(doc, analisis.cobertura, yPos, terminoGeografico);
+            yPos += 10;
 
-        // Sección Cobertura
-        yPos = this.agregarSeccionCobertura(doc, analisis.cobertura, yPos, terminoGeografico);
-        yPos += 10;
+            if (yPos > 250) {
+                doc.addPage();
+                yPos = 20;
+            }
 
-        // Nueva página si es necesario
-        if (yPos > 250) {
+            yPos = this.agregarSeccionEjecucion(doc, analisis.ejecucion, yPos);
+            yPos += 10;
+
+            yPos = this.agregarSeccionBeneficiarios(doc, analisis.beneficiarios, yPos);
+            yPos += 10;
+
+            yPos = this.agregarSeccionTemporal(doc, analisis.temporal, yPos);
+
             doc.addPage();
             yPos = 20;
+            yPos = this.agregarSeccionInversion(doc, analisis.inversion, yPos);
+
+            const totalPages = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= totalPages; i++) {
+                doc.setPage(i);
+                this.agregarPiePagina(doc, i, totalPages);
+            }
+
+        } catch (error) {
+            console.error('Error en generación de PDF:', error);
+            throw new Error('Error al generar el PDF: ' + error.message);
         }
-
-        // Sección Ejecución
-        yPos = this.agregarSeccionEjecucion(doc, analisis.ejecucion, yPos);
-        yPos += 10;
-
-        // Sección Beneficiarios
-        yPos = this.agregarSeccionBeneficiarios(doc, analisis.beneficiarios, yPos);
-        yPos += 10;
-
-        // Sección Temporal
-        yPos = this.agregarSeccionTemporal(doc, analisis.temporal, yPos);
-
-        // Sección Inversión (en nueva página)
-        doc.addPage();
-        yPos = 20;
-        yPos = this.agregarSeccionInversion(doc, analisis.inversion, yPos);
-
-        // Pie de página en todas las páginas
-        const totalPages = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= totalPages; i++) {
-            doc.setPage(i);
-            this.agregarPiePagina(doc, i, totalPages);
-        }
-
-    } catch (error) {
-        console.error('Error en generación de PDF:', error);
-        throw new Error('Error al generar el PDF: ' + error.message);
     }
-}
 
-// Métodos auxiliares para generación de PDF
-static agregarEncabezado(doc, { estado, ciclo, programa, municipio, terminoGeografico, yPos }) {
-    doc.setFontSize(16);
-    doc.text(`Análisis FAIS - ${estado}`, 105, yPos, { align: 'center' });
-    
-    doc.setFontSize(12);
-    doc.text(`Ciclo: ${ciclo} | Programa: ${programa}`, 105, yPos + 10, { align: 'center' });
-    
-    if (municipio) {
-        doc.text(`${terminoGeografico}: ${municipio}`, 105, yPos + 20, { align: 'center' });
-    }
-}
-
-static agregarSeccionFinanciera(doc, financiero, yPos) {
-    doc.setFontSize(14);
-    doc.text("Información Financiera", 20, yPos);
-    yPos += 10;
-    
-    doc.setFontSize(10);
-    const items = [
-        `Total Aprobado: $${this.formatNumber(financiero.totalAprobado)}`,
-        `Total Ejercido: $${this.formatNumber(financiero.totalEjercido)}`,
-        `Total Pagado: $${this.formatNumber(financiero.totalPagado)}`,
-        `Porcentaje Ejercido: ${financiero.porcentajeEjercido}%`,
-        `Porcentaje Pagado: ${financiero.porcentajePagado}%`
-    ];
-
-    items.forEach(item => {
-        doc.text(item, 25, yPos);
-        yPos += 7;
-    });
-
-    return yPos;
-}
-
-static agregarSeccionFisica(doc, fisico, yPos) {
-    doc.setFontSize(14);
-    doc.text("Información Física", 20, yPos);
-    yPos += 10;
-    
-    doc.setFontSize(10);
-    const items = [
-        `Total Proyectos: ${fisico.totalProyectos}`,
-        `Promedio de Avance: ${fisico.promedioAvance}%`,
-        `Proyectos Terminados: ${fisico.proyectosTerminados}`,
-        `Porcentaje Terminados: ${fisico.porcentajeTerminados}%`
-    ];
-
-    items.forEach(item => {
-        doc.text(item, 25, yPos);
-        yPos += 7;
-    });
-
-    return yPos;
-}
-
-static agregarSeccionCobertura(doc, cobertura, yPos, terminoGeografico) {
-    doc.setFontSize(14);
-    doc.text("Cobertura", 20, yPos);
-    yPos += 10;
-    
-    doc.setFontSize(10);
-    const items = [
-        `Total Localidades: ${cobertura.totalLocalidades}`,
-        `Distribución: ${cobertura.distribucionGeografica}`,
-        `Concentración de Inversión: ${cobertura.porcentajeConcentracion}%`
-    ];
-
-    items.forEach(item => {
-        doc.text(item, 25, yPos);
-        yPos += 7;
-    });
-
-    return yPos;
-}
-
-static agregarSeccionEjecucion(doc, ejecucion, yPos) {
-    doc.setFontSize(14);
-    doc.text("Ejecución", 20, yPos);
-    yPos += 10;
-    
-    doc.setFontSize(10);
-    const items = [
-        `Total Instituciones Ejecutoras: ${ejecucion.totalEjecutoras}`,
-        `Total Contratistas: ${ejecucion.totalContratistas}`,
-        `Total Convocantes: ${ejecucion.totalConvocantes}`
-    ];
-
-    items.forEach(item => {
-        doc.text(item, 25, yPos);
-        yPos += 7;
-    });
-
-    return yPos;
-}
-
-static agregarSeccionBeneficiarios(doc, beneficiarios, yPos) {
-    doc.setFontSize(14);
-    doc.text("Beneficiarios", 20, yPos);
-    yPos += 10;
-    
-    doc.setFontSize(10);
-    const items = [
-        `Total Mujeres: ${this.formatNumber(beneficiarios.totalMujeres)}`,
-        `Total Hombres: ${this.formatNumber(beneficiarios.totalHombres)}`,
-        `Ratio Mujeres: ${beneficiarios.ratioMujeres}%`
-    ];
-
-    items.forEach(item => {
-        doc.text(item, 25, yPos);
-        yPos += 7;
-    });
-
-    return yPos;
-}
-
-static agregarSeccionTemporal(doc, temporal, yPos) {
-    doc.setFontSize(14);
-    doc.text("Información Temporal", 20, yPos);
-    yPos += 10;
-    
-    doc.setFontSize(10);
-    const items = [
-        `Promedio Tiempo Ejecución: ${temporal.promedioTiempoEjecucion} meses`,
-        `Mes con más Inicios: ${temporal.mesMasInicios}`,
-        `Mes con más Términos: ${temporal.mesMasTerminos}`
-    ];
-
-    items.forEach(item => {
-        doc.text(item, 25, yPos);
-        yPos += 7;
-    });
-
-    return yPos;
-}
-
-static agregarSeccionInversion(doc, inversion, yPos) {
-    doc.setFontSize(14);
-    doc.text("Distribución de la Inversión", 20, yPos);
-    yPos += 10;
-    
-    // Función auxiliar para agregar subsecciones
-    const agregarSubseccion = (titulo, datos, yStart) => {
+    static agregarEncabezado(doc, { estado, ciclo, programa, municipio, terminoGeografico, yPos }) {
+        doc.setFontSize(16);
+        doc.text(`Análisis FAIS - ${estado}`, 105, yPos, { align: 'center' });
+        
         doc.setFontSize(12);
-        doc.text(titulo, 25, yStart);
-        yStart += 7;
+        doc.text(`Ciclo: ${ciclo} | Programa: ${programa}`, 105, yPos + 10, { align: 'center' });
+        
+        if (municipio) {
+            doc.text(`${terminoGeografico}: ${municipio}`, 105, yPos + 20, { align: 'center' });
+        }
+    }
+
+    static agregarSeccionFinanciera(doc, financiero, yPos) {
+        doc.setFontSize(14);
+        doc.text("Información Financiera", 20, yPos);
+        yPos += 10;
         
         doc.setFontSize(10);
-        Object.entries(datos).forEach(([categoria, monto]) => {
-            const texto = `${categoria}: $${this.formatNumber(monto)}`;
-            doc.text(texto, 30, yStart);
-            yStart += 7;
+        const items = [
+            `Total Aprobado: $${this.formatNumber(financiero.totalAprobado)}`,
+            `Total Ejercido: $${this.formatNumber(financiero.totalEjercido)}`,
+            `Total Pagado: $${this.formatNumber(financiero.totalPagado)}`,
+            `Porcentaje Ejercido: ${financiero.porcentajeEjercido}%`,
+            `Porcentaje Pagado: ${financiero.porcentajePagado}%`
+        ];
+
+        items.forEach(item => {
+            doc.text(item, 25, yPos);
+            yPos += 7;
         });
+
+        return yPos;
+    }
+
+    static agregarSeccionFisica(doc, fisico, yPos) {
+        doc.setFontSize(14);
+        doc.text("Información Física", 20, yPos);
+        yPos += 10;
         
-        return yStart + 5;
-    };
+        doc.setFontSize(10);
+        const items = [
+            `Total Proyectos: ${fisico.totalProyectos}`,
+            `Promedio de Avance: ${fisico.promedioAvance}%`,
+            `Proyectos Terminados: ${fisico.proyectosTerminados}`,
+            `Porcentaje Terminados: ${fisico.porcentajeTerminados}%`
+        ];
 
-    yPos = agregarSubseccion("Por Categoría", inversion.porCategoria, yPos);
-    yPos = agregarSubseccion("Por Tipo de Programa", inversion.porTipoPrograma, yPos);
-    yPos = agregarSubseccion("Por Clasificación", inversion.porClasificacion, yPos);
+        items.forEach(item => {
+            doc.text(item, 25, yPos);
+            yPos += 7;
+        });
 
-    return yPos;
-}
+        return yPos;
+    }
 
-static agregarPiePagina(doc, numerosPagina, totalPaginas) {
-    const fecha = new Date().toLocaleDateString('es-MX');
-    doc.setFontSize(8);
-    doc.text(
-        `Página ${numerosPagina} de ${totalPaginas}`,
-        20,
-        280
-    );
-    doc.text(
-        `Gobierno Digital e Innovación © ${new Date().getFullYear()} - Generado el ${fecha}`,
-        105,
-        280,
-        { align: 'center' }
-    );
-}
+    static agregarSeccionCobertura(doc, cobertura, yPos, terminoGeografico) {
+        doc.setFontSize(14);
+        doc.text("Cobertura", 20, yPos);
+        yPos += 10;
+        
+        doc.setFontSize(10);
+        const items = [
+            `Total Localidades: ${cobertura.totalLocalidades}`,
+            `Distribución: ${cobertura.distribucionGeografica}`,
+            `Concentración de Inversión: ${cobertura.porcentajeConcentracion}%`
+        ];
+
+        items.forEach(item => {
+            doc.text(item, 25, yPos);
+            yPos += 7;
+        });
+
+        return yPos;
+    }
+
+    static agregarSeccionEjecucion(doc, ejecucion, yPos) {
+        doc.setFontSize(14);
+        doc.text("Ejecución", 20, yPos);
+        yPos += 10;
+        
+        doc.setFontSize(10);
+        const items = [
+            `Total Instituciones Ejecutoras: ${ejecucion.totalEjecutoras}`,
+            `Total Contratistas: ${ejecucion.totalContratistas}`,
+            `Total Convocantes: ${ejecucion.totalConvocantes}`
+        ];
+
+        items.forEach(item => {
+            doc.text(item, 25, yPos);
+            yPos += 7;
+        });
+
+        return yPos;
+    }
+
+    static agregarSeccionBeneficiarios(doc, beneficiarios, yPos) {
+        doc.setFontSize(14);
+        doc.text("Beneficiarios", 20, yPos);
+        yPos += 10;
+        
+        doc.setFontSize(10);
+        const items = [
+            `Total Mujeres: ${this.formatNumber(beneficiarios.totalMujeres)}`,
+            `Total Hombres: ${this.formatNumber(beneficiarios.totalHombres)}`,
+            `Ratio Mujeres: ${beneficiarios.ratioMujeres}%`
+        ];
+
+        items.forEach(item => {
+            doc.text(item, 25, yPos);
+            yPos += 7;
+        });
+
+        return yPos;
+    }
+
+    static agregarSeccionTemporal(doc, temporal, yPos) {
+        doc.setFontSize(14);
+        doc.text("Información Temporal", 20, yPos);
+        yPos += 10;
+        
+        doc.setFontSize(10);
+        const items = [
+            `Promedio Tiempo Ejecución: ${temporal.promedioTiempoEjecucion} meses`,
+            `Mes con más Inicios: ${temporal.mesMasInicios}`,
+            `Mes con más Términos: ${temporal.mesMasTerminos}`
+        ];
+
+        items.forEach(item => {
+            doc.text(item, 25, yPos);
+            yPos += 7;
+        });
+
+        return yPos;
+    }
+
+    static agregarSeccionInversion(doc, inversion, yPos) {
+        doc.setFontSize(14);
+        doc.text("Distribución de la Inversión", 20, yPos);
+        yPos += 10;
+        
+        const agregarSubseccion = (titulo, datos, yStart) => {
+            doc.setFontSize(12);
+            doc.text(titulo, 25, yStart);
+            yStart += 7;
+            
+            doc.setFontSize(10);
+            Object.entries(datos).forEach(([categoria, monto]) => {
+                const texto = `${categoria}: $${this.formatNumber(monto)}`;
+                doc.text(texto, 30, yStart);
+                yStart += 7;
+            });
+            
+            return yStart + 5;
+        };
+
+        yPos = agregarSubseccion("Por Categoría", inversion.porCategoria, yPos);
+        yPos = agregarSubseccion("Por Tipo de Programa", inversion.porTipoPrograma, yPos);
+        yPos = agregarSubseccion("Por Clasificación", inversion.porClasificacion, yPos);
+
+        return yPos;
+    }
+
+    static agregarPiePagina(doc, numeroPagina, totalPaginas) {
+        const fecha = new Date().toLocaleDateString('es-MX');
+        doc.setFontSize(8);
+        doc.text(
+            `Página ${numeroPagina} de ${totalPaginas}`,
+            20,
+            280
+        );
+        doc.text(
+            `Gobierno Digital e Innovación © ${new Date().getFullYear()} - Generado el ${fecha}`,
+            105,
+            280,
+            { align: 'center' }
+        );
+    }
 }
 
 export default AnalyticsManager;

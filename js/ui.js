@@ -8,7 +8,6 @@ export class UIManager {
         this.initialize();
     }
 
-    // Inicialización
     async initialize() {
         try {
             this.showLoading(true);
@@ -78,7 +77,6 @@ export class UIManager {
         }
     }
 
-    // Manejadores de eventos
     async handleEstadoChange(event) {
         try {
             const estadoSeleccionado = event.target.value;
@@ -168,6 +166,38 @@ export class UIManager {
         }
     }
 
+    handleLimpiarFiltros() {
+        try {
+            document.getElementById('ciclo').value = '';
+            document.getElementById('programa').value = '';
+            document.getElementById('estado').value = '';
+            document.getElementById('municipio').value = '';
+            
+            dataManager.clearData();
+            
+            document.getElementById('municipioContainer').style.display = 'block';
+            document.getElementById('municipio').disabled = true;
+            document.getElementById('generarAnalisis').disabled = true;
+            document.getElementById('exportarExcel').disabled = true;
+            document.getElementById('errorMessage').style.display = 'none';
+            
+            this.initialize();
+        } catch (error) {
+            console.error('Error al limpiar filtros:', error);
+            this.showError('Error al limpiar filtros');
+        }
+    }
+
+    handleCicloChange() {
+        this.filterData();
+        this.checkFiltersAndEnableButtons();
+    }
+
+    handleMunicipioChange() {
+        this.filterData();
+        this.checkFiltersAndEnableButtons();
+    }
+
     // Métodos auxiliares
     getDisplayName(id) {
         const names = {
@@ -196,6 +226,49 @@ export class UIManager {
         };
     }
 
+    handleProgramaEstatal(municipioSelect) {
+        municipioSelect.disabled = true;
+        document.getElementById('municipioContainer').style.display = 'none';
+    }
+
+    handleProgramaMunicipal(municipioSelect, municipios, esCDMX, programa, etiquetaSelector) {
+        if (municipios.length > 0) {
+            municipioSelect.disabled = false;
+            document.getElementById('municipioContainer').style.display = 'block';
+            municipios.forEach(municipio => {
+                const opt = document.createElement('option');
+                opt.value = municipio;
+                opt.textContent = municipio;
+                municipioSelect.appendChild(opt);
+            });
+        } else {
+            this.showError(
+                `No se encontraron ${esCDMX ? 'alcaldías' : 'municipios'} para el programa ${programa}`
+            );
+            municipioSelect.disabled = true;
+        }
+    }
+
+    checkFiltersAndEnableButtons() {
+        const filtros = this.obtenerFiltrosActuales();
+        const isValid = filtros.ciclo && filtros.programa && filtros.estado && 
+                       (filtros.programa === PROGRAMAS.ESTATAL || filtros.municipio);
+        
+        document.getElementById('generarAnalisis').disabled = !isValid;
+        document.getElementById('exportarExcel').disabled = !isValid;
+    }
+
+    filterData() {
+        const filtros = this.obtenerFiltrosActuales();
+        dataManager.filterData(filtros);
+    }
+
+    resetMunicipio() {
+        const municipioSelect = document.getElementById('municipio');
+        municipioSelect.value = '';
+        municipioSelect.disabled = true;
+    }
+
     // Métodos de UI
     showLoading(show) {
         document.getElementById('loadingMessage').style.display = show ? 'block' : 'none';
@@ -215,6 +288,14 @@ export class UIManager {
         document.getElementById('filtersContainer').style.display = show ? 'grid' : 'none';
     }
 
+    hideMunicipioContainer() {
+        document.getElementById('municipioContainer').style.display = 'none';
+    }
+
+    showMunicipioContainer() {
+        document.getElementById('municipioContainer').style.display = 'block';
+    }
+
     setBotonEstado(boton, disabled, texto) {
         boton.disabled = disabled;
         boton.textContent = texto;
@@ -223,6 +304,44 @@ export class UIManager {
 
     mostrarAlerta(mensaje) {
         alert(mensaje);
+    }
+
+    async exportarAExcel(data, filtros) {
+        const wb = XLSX.utils.book_new();
+        const dataToExport = data.map(item => ({
+            'Folio': item['FOLIO'],
+            'Ciclo del Recurso': item['CICLO DEL RECURSO'],
+            'Programa Presupuestario': item['PROGRAMA PRESUPUESTARIO'],
+            'Estado': item['NOMBRE_ENTIDAD'],
+            'Municipio': item['NOMBRE_MUNICIPIO'],
+            'Localidad': item['LOCALIDAD'],
+            'Monto Aprobado': item['APROBADO'],
+            'Monto Ejercido': item['EJERCIDO'],
+            'Monto Pagado': item['PAGADO'],
+            'Estatus': item['ESTATUS'],
+            'Porcentaje Avance': item['PORCENTAJE'],
+            'Institución Ejecutora': item['INSTITUCION_EJECUTORA'],
+            'Contratista': item['CONTRATISTA'],
+            'Convocante': item['CONVOCANTE'],
+            'Categoría': item['CATEGORIA'],
+            'Tipo de Programa': item['TIPO_PROGRAMA_PROYECTO'],
+            'Clasificación': item['CLASIFICACION'],
+            'Beneficiarios Mujeres': item['MUJERES'],
+            'Beneficiarios Hombres': item['HOMBRES'],
+            'Fecha Inicio': item['FECHA_INICIO'],
+            'Fecha Término': item['FECHA_TERMINO']
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(dataToExport);
+        ws['!cols'] = Object.keys(dataToExport[0]).map(() => ({ wch: 20 }));
+        
+        XLSX.utils.book_append_sheet(wb, ws, "Datos FAIS");
+        
+        const nombreArchivo = `${filtros.ciclo}_${filtros.programa.split('-')[1]}_${filtros.estado}${
+            filtros.municipio ? '_' + filtros.municipio : ''
+        }.xlsx`;
+        
+        XLSX.writeFile(wb, nombreArchivo);
     }
 
     // Eventos
@@ -237,5 +356,4 @@ export class UIManager {
     }
 }
 
-// Exportar una instancia única
 export const uiManager = new UIManager();
