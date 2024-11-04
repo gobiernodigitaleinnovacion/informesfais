@@ -1,92 +1,121 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-   <meta charset="UTF-8">
-   <title>Análisis FAIS</title>
-   <link rel="stylesheet" href="css/styles.css">
-   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-   <!-- Asegúrate de que estos scripts se carguen en este orden -->
-   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análisis FAIS</title>
+    <!-- Estilos -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- Scripts externos -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
-   <div class="app-container">
-       <header class="app-header">
-           <h1 class="app-title">Análisis FAIS</h1>
-       </header>
+    <div class="app-container">
+        <header class="app-header">
+            <h1 class="app-title">Análisis FAIS</h1>
+        </header>
 
-       <div id="loadingMessage" class="loading">
-           <div class="loading-spinner"></div>
-       </div>
+        <!-- Mensaje de carga -->
+        <div id="loadingMessage" class="loading" style="display: none;">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Cargando datos...</div>
+        </div>
 
-       <div id="errorMessage"></div>
-       
-       <div class="filters" id="filtersContainer" style="display: none;">
-           <div class="filter-group">
-               <select id="estado">
-                   <option value="">Selecciona Estado</option>
-               </select>
-           </div>
-           
-           <div class="filter-group">
-               <select id="ciclo">
-                   <option value="">Selecciona Ciclo</option>
-               </select>
-           </div>
-           
-           <div class="filter-group">
-               <select id="programa">
-                   <option value="">Selecciona Programa</option>
-               </select>
-           </div>
-           
-           <div class="filter-group" id="municipioContainer">
-               <select id="municipio" disabled>
-                   <option value="">Selecciona Municipio</option>
-               </select>
-           </div>
-       </div>
+        <!-- Mensaje de error -->
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+        
+        <!-- Filtros -->
+        <div class="filters" id="filtersContainer">
+            <div class="filter-group">
+                <label for="estado">Estado:</label>
+                <select id="estado">
+                    <option value="">Selecciona Estado</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="ciclo">Ciclo:</label>
+                <select id="ciclo">
+                    <option value="">Selecciona Ciclo</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="programa">Programa:</label>
+                <select id="programa">
+                    <option value="">Selecciona Programa</option>
+                </select>
+            </div>
+            
+            <div class="filter-group" id="municipioContainer">
+                <label for="municipio">Municipio:</label>
+                <select id="municipio" disabled>
+                    <option value="">Selecciona Municipio</option>
+                </select>
+            </div>
+        </div>
 
-       <div class="button-container">
-           <button id="generarAnalisis" disabled>
-               <i class="fas fa-chart-bar"></i>
-               Generar Análisis
-           </button>
-           <button id="exportarExcel" disabled>
-               <i class="fas fa-file-excel"></i>
-               Exportar a Excel
-           </button>
-           <button id="limpiarFiltros">
-               <i class="fas fa-broom"></i>
-               Limpiar Filtros
-           </button>
-       </div>
+        <!-- Contenedor de resultados -->
+        <div id="resultsContainer" class="results-container" style="display: none;">
+            <div id="summaryStats" class="summary-stats"></div>
+            <div id="charts" class="charts-container"></div>
+        </div>
 
-       <div class="footer">
-           <div class="footer-content">
-               <p>
-                   <a href="mailto:juanheriberto.rosas@gobiernodigitaleinnovacion.com">
-                       <i class="fas fa-envelope"></i> 
-                       juanheriberto.rosas@gobiernodigitaleinnovacion.com
-                   </a>
-               </p>
-               <p>
-                   <a href="https://www.gobiernodigitaleinnovacion.com/" target="_blank">
-                       <i class="fas fa-globe"></i> 
-                       www.gobiernodigitaleinnovacion.com
-                   </a>
-               </p>
-               <p class="copyright">
-                   © 2024 Gobierno Digital e Innovación. Todos los derechos reservados.
-               </p>
-           </div>
-       </div>
-   </div>
+        <!-- Botones de acción -->
+        <div class="button-container">
+            <button id="generarAnalisis" class="btn btn-primary" disabled>
+                <i class="fas fa-chart-bar"></i>
+                Generar Análisis
+            </button>
+            <button id="exportarExcel" class="btn btn-success" disabled>
+                <i class="fas fa-file-excel"></i>
+                Exportar a Excel
+            </button>
+            <button id="limpiarFiltros" class="btn btn-secondary">
+                <i class="fas fa-broom"></i>
+                Limpiar Filtros
+            </button>
+        </div>
 
-   <script src="js/config.js"></script>
-   <script src="js/dataManager.js"></script>
-   <script src="js/analytics.js"></script>
-   <script src="js/ui.js"></script>
+        <!-- Pie de página -->
+        <footer class="footer">
+            <div class="footer-content">
+                <p>
+                    <a href="mailto:juanheriberto.rosas@gobiernodigitaleinnovacion.com">
+                        <i class="fas fa-envelope"></i> 
+                        juanheriberto.rosas@gobiernodigitaleinnovacion.com
+                    </a>
+                </p>
+                <p>
+                    <a href="https://www.gobiernodigitaleinnovacion.com/" target="_blank" rel="noopener noreferrer">
+                        <i class="fas fa-globe"></i> 
+                        www.gobiernodigitaleinnovacion.com
+                    </a>
+                </p>
+                <p class="copyright">
+                    © 2024 Gobierno Digital e Innovación. Todos los derechos reservados.
+                </p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Scripts de la aplicación -->
+    <script type="module">
+        // Importar las funciones necesarias
+        import { initializeApp } from './js/app.js';
+        
+        // Inicializar la aplicación cuando el DOM esté listo
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeApp().catch(error => {
+                console.error('Error al inicializar la aplicación:', error);
+                document.getElementById('errorMessage').textContent = 
+                    'Error al inicializar la aplicación. Por favor, recarga la página.';
+                document.getElementById('errorMessage').style.display = 'block';
+            });
+        });
+    </script>
 </body>
 </html>
