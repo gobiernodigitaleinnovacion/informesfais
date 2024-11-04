@@ -1,4 +1,3 @@
-// Configuración principal de la aplicación
 export const APP_CONFIG = {
     // Configuración de Azure OpenAI
     openai: {
@@ -18,16 +17,19 @@ export const APP_CONFIG = {
     http: {
         cors: {
             mode: 'cors',
+            credentials: 'omit',
             headers: {
-                'Origin': window.location.origin,
+                'Origin': 'https://gobiernodigitaleinnovacion.github.io',
                 'Content-Type': 'application/json',
-                'Accept': 'application/json'
+                'Accept': 'application/json',
+                'Access-Control-Allow-Origin': '*'
             }
         },
         openaiHeaders: function() {
             return {
                 'Content-Type': 'application/json',
-                'api-key': this.openai.API_KEY
+                'api-key': this.openai.API_KEY,
+                'Origin': 'https://gobiernodigitaleinnovacion.github.io'
             };
         }
     }
